@@ -1,18 +1,15 @@
-# Télécharger et installer Maison OS Diagnostic
+# Maison OS · APK V1
 
-**[Télécharger l’APK 0.1.0](maison-os-diagnostic-0.1.0.apk?raw=true)**
+**[Télécharger Maison OS 1.0.0](maison-os-1.0.0.apk?raw=true)**
 
-Si le lien ouvre seulement la page du fichier, cliquer sur **Download raw file** (icône de téléchargement en haut à droite) dans GitHub. Ouvrir GitHub dans le navigateur si le panneau de Codex ne télécharge pas les fichiers. Un dépôt privé nécessite une connexion au compte GitHub autorisé.
+Si le téléchargement ne démarre pas, ouvrir [la page de l’APK](maison-os-1.0.0.apk), puis utiliser **Download raw file** (icône de téléchargement en haut à droite) dans GitHub. Ouvrir la page dans le navigateur et se connecter si le dépôt est privé.
 
-Fichier : `maison-os-diagnostic-0.1.0.apk` · 17 650 426 octets · signature de développement · Android 8/API 26 minimum, Android 16/API 36 ciblé.
+## Installer
 
-SHA-256 : `6dfbe54816a0cbe2b5f61db619602372b7ac8de863db2773cd81dbb492ea0617`.
+Installer **par-dessus l’APK de diagnostic**, sans la désinstaller : le package et la clé de signature sont conservés, et la caméra existante est migrée. Les APK de CI sont signées avec leur propre clé ; elles ne remplacent pas cette installation.
 
-1. Télécharger l’APK sur la tablette ou la transférer depuis l’ordinateur.
-2. Ouvrir le fichier et autoriser l’installation depuis le navigateur/gestionnaire de fichiers choisi.
-3. Ouvrir **Maison OS · Diagnostic**, puis **Diagnostics** et **Caméra LAN**.
-4. Suivre [la procédure de validation matérielle](../docs/VALIDATION.md).
+Ouvrir ensuite **Salat** pour configurer la ville, importer une récitation personnelle et autoriser les alarmes exactes/notifications. **Caméras** gère plusieurs équipements et une recherche approfondie ; **Accueil → Personnaliser** permet le placement et le redimensionnement des widgets.
 
-Il s’agit de la preuve de faisabilité : les essais réels sur la tablette et les caméras restent à effectuer. Les 23 tests JVM et les 3 tests Android sur émulateur sont documentés dans [le rapport de livraison](../docs/BUILD-REPORT.md) et les [rapports bruts](verification/).
+Consulter [le guide V1](../docs/V1-GUIDE.md), [les limites](../docs/LIMITATIONS-V1.md) et [la validation](../docs/VALIDATION-V1.md). Les rapports de la V1 sont dans [verification-v1](verification-v1/). L’APK 0.1.0 et ses rapports restent conservés comme livraison historique.
 
-Les sources se trouvent à la racine du dépôt. Les liens locaux `/workspace/...` désignent la machine de travail Codex ; les fichiers de ce dossier sont destinés à être récupérés directement depuis GitHub.
+La V1 fonctionne localement sans serveur. La lecture des caméras, le STOP mécanique, l’audio audible et le fonctionnement continu doivent être confirmés sur les équipements réels. La découverte d’une caméra n’est jamais garantie par son nom commercial ni par sa seule adresse IP.

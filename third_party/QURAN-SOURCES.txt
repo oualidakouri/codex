@@ -1,0 +1,16 @@
+Maison OS 1.0 — Sources et licences
+
+Adhan Kotlin 0.0.5 — Batoul Apps, MIT. https://github.com/batoulapps/adhan-kotlin
+
+Composants DVRIP/PTZ issus de voidnullvalue/Icsee-android © 2026 |VOID|, MIT. https://github.com/voidnullvalue/Icsee-android
+
+Textes des invocations : versets coraniques reproduits sans modification.
+
+Tanzil Quran Text. Copyright (C) 2007-2021 Tanzil Project. License: Creative Commons Attribution 3.0. This copy of the Quran text is carefully produced, highly verified and continuously monitored by a group of specialists in Tanzil Project. TERMS OF USE: Permission is granted to copy and distribute verbatim copies of this text, but CHANGING IT IS NOT ALLOWED. This Quran text can be used in any website or application, provided that its source (Tanzil Project) is clearly indicated, and a link is made to tanzil.net to enable users to keep track of changes. This copyright notice shall be included in all verbatim copies of the text, and shall be reproduced appropriately in all files derived from or containing substantial portion of this text. Please check updates at: http://tanzil.net/updates/
+
+Traduction française : Noor International Center, QuranEnc French Montada version 1.0.0. https://quranenc.com/en/browse/french_montada/
+QuranEnc autorise la republication sans modification, addition ou suppression, avec attribution, version, informations de transcription, suivi des mises à jour et sans publicité inappropriée. Notes et corrections : https://quranenc.com/en/home/api
+
+Sélection extraite de risan/quran-json, révision 6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123. Jeu de données CC BY-SA 4.0 ; licences propres des sources conservées. Les versets, traductions et notes sont copiés intégralement. https://github.com/risan/quran-json
+
+Les licences complètes MIT et CC BY-SA 4.0 sont incluses dans les fichiers assets de cette APK et dans third_party du dépôt. Aucun fichier audio de récitation tiers n’est distribué.

@@ -5,7 +5,9 @@ import java.net.URI
 
 @Serializable
 data class CameraConfig(
+    val id: String = java.util.UUID.randomUUID().toString(),
     val name: String = "Ma caméra",
+    val room: String = "",
     val host: String = "",
     val username: String = "",
     val password: String = "",
@@ -13,6 +15,7 @@ data class CameraConfig(
     val onvifPort: Int = 8899,
     val onvifPath: String = "/onvif/device_service",
     val rtspUrl: String = "",
+    val mainRtspUrl: String = "",
     val dvripPtzConfirmed: Boolean = false,
 ) {
     fun validate() {
@@ -20,9 +23,10 @@ data class CameraConfig(
         require(dvripPort in 1..65535 && onvifPort in 1..65535) { "Port invalide" }
         require(onvifPath.startsWith('/') && !onvifPath.startsWith("//") && !onvifPath.contains('?')) { "Chemin ONVIF invalide" }
         if (rtspUrl.isNotBlank()) LocalEndpoint.requireUrl(rtspUrl, setOf("rtsp"), host)
+        if (mainRtspUrl.isNotBlank()) LocalEndpoint.requireUrl(mainRtspUrl, setOf("rtsp"), host)
         require(username.length <= 128 && password.length <= 256 && name.length <= 100)
     }
-    fun exportSafe() = copy(password = "", rtspUrl = "", dvripPtzConfirmed = false)
+    fun exportSafe() = copy(password = "", rtspUrl = "", mainRtspUrl = "", dvripPtzConfirmed = false)
     override fun toString() = "CameraConfig(credentials=redacted)"
 }
 

@@ -1,48 +1,35 @@
-# Architecture de la preuve de faisabilité
+# Architecture Maison OS V1
 
-## Décisions
+Deux modules Kotlin, sans backend : `core` (domaine JVM testable) et `app` (Android/Compose). Application ID historique `fr.maisonos.diagnostic` conservé pour mettre à jour le diagnostic sans perte de configuration. Version 1.0.0 / code 10, min API 26, cible API 36.
 
-Kotlin et Jetpack Compose/Material 3 pour une APK native. `minSdk=26`, `compileSdk=targetSdk=36`. JDK 21 et Gradle 8.13/AGP 8.13.2 sont épinglés. Une seule activité et deux modules évitent de fragmenter prématurément ce petit banc de diagnostic.
+## Domaine
 
-```text
-app (Android)
-  MainActivity / Compose       écrans, permissions à la demande, documents SAF
-  ProbeViewModel               StateFlow, observations, opérations et cycle de vie
-  ConfigStore                  fichier atomique chiffré, clé Android Keystore
-  DeviceDiagnostics            Wi-Fi, mémoire, codecs, batterie, thermique
-  CameraTests                  Media3 RTSP, CameraX / analyse Y échantillonnée
-       ↓
-core (JVM indépendant d’Android)
-  LocalEndpoint / CameraConfig validation des destinations et configuration
-  LanDiscovery                 fenêtre UDP DVRIP / ONVIF de 5 secondes
-  DvripClient                  session unique, échanges sérialisés, keepalive
-  OnvifClient / SafeXml         SOAP/WSSE, HTTP Digest, profils, PTZ
-  PtzPort                      abstraction partagée de contrôle PTZ
-  DeviceDescriptor / WidgetDescriptor  contrats pour les prochaines phases
-  DeviceEventSource            flux d’événements explicites
-  SimulationConnector          événements toujours étiquetés simulated=true
-  MotionDetector / BoundedLog   primitives testables et mémoire bornée
-  vendor                       primitives MIT iCSee attribuées
-```
+- `PrayerEngine` encapsule Adhan Kotlin 0.0.5 sous MIT : événements UTC, fuseau IANA, DST, méthodes, madhab, corrections, périodes silencieuses et prochaines alarmes par prière. Aucune position personnelle par défaut.
+- `HomeModels` porte profils, dispositions paysage/portrait, widgets, médias, règles et préférences. `LayoutEngine` conserve les widgets et évite les chevauchements après déplacement/redimensionnement.
+- `DvripClient`, `OnvifClient`, `PtzPort` et `LocalEndpoint` assurent les protocoles locaux. Le catalogue de caméras est distinct du nombre de décodeurs vidéo autorisés.
+- `LanDiscovery` répète les probes bornés DVRIP/ONVIF ; `LanUnicastProbe` est un repli explicite sur un segment /24, vérifiant le protocole sans authentification. Les résultats sont regroupés par hôte.
+- `RuleEngine`, `DeviceEventSource`, `SimulationConnector` et les descripteurs de périphériques/widgets séparent événements et présentation. Les données de simulation restent identifiées.
 
-## Exécution et ressources
+## Android
 
-Le ViewModel conserve l’état d’interface sans stocker les mots de passe dans un état Compose sauvegardé. Les opérations réseau bloquantes sont exécutées sur `Dispatchers.IO`. Chaque nouvelle connexion DVRIP est explicite, espacée d’au moins cinq secondes et limitée à trois essais par minute par destination pendant la session de l’application, même après remplacement du client ; aucun essai automatique d’identifiants. Un keepalive toutes les dix secondes entretient la session ouverte. La connexion perdue doit être rouverte manuellement pour éviter une boucle de tentatives d’authentification.
+`ProbeViewModel` conserve son nom pour réutiliser les composants de diagnostic. Son StateFlow expose configuration et observations ; une Mutex sérialise les écritures. Les fichiers sont écrits via AtomicFile et chiffrés AES-256-GCM avec une clé Android Keystore. Le schéma 1 du diagnostic est migré vers le schéma 2 ; la caméra et les secrets sont repris et une carte caméra est ajoutée. Les futures migrations doivent conserver cette propriété.
 
-Un seul lecteur Media3 à la fois, RTSP/RTP sur TCP, son coupé et reprise bornée à cinq tentatives (2, 4, 8, 16, 30 secondes). Sortir de la page vidéo, mettre en veille ou quitter le premier plan libère le lecteur. Une nouvelle connexion RTSP est une vraie tentative d’authentification ; le nombre de reprises est borné. La caméra frontale analyse au plus huit grilles de luminance par seconde, avec résolution 320 × 240 demandée (la caméra peut négocier une autre taille). Les images sont fermées dans un `finally`.
+`MaisonApp`, `PrayerScreens`, `HomeCameras`, `EventsScreen` et `HomeSettingsScreen` composent l’interface. Les lecteurs Media3 sont attachés à leur visibilité et au premier plan. La résolution des images de fond/événement est sous-échantillonnée. Les cartes caméra privilégient les sous-flux ; le plein écran peut choisir un flux principal séparé. La présence CameraX compare des grilles Y à au plus huit échantillons/s et ferme systématiquement les images.
 
-Les métriques sont échantillonnées toutes les cinq secondes, avec au plus 120 mesures et 200 entrées de journal. Batterie non branchée à 10 % ou moins, ou état thermique Android sévère : arrêt des tests vidéo et caméra. Le mode veille est une couche noire à faible luminosité ; la caméra reste possible uniquement tant que l’activité reste au premier plan et que le système l’autorise.
+`AdhanScheduler` installe une prochaine alarme par prière activée, puis reprogramme à la réception. AlarmManager utilise le mode exact si autorisé, sinon un mode approximatif explicitement signalé. `AdhanReceiver` refuse les échéances anciennes/dupliquées, applique les plages silencieuses et démarre la lecture demandée. `RescheduleReceiver` ne fait que rétablir les alarmes après boot/heure/fuseau/date/mise à jour. Aucun démarrage d’activité ou service caméra au boot.
 
-## Sécurité et réseau
+`AdhanService` est un service de premier plan `mediaPlayback`, avec notification d’arrêt, audio focus transitoire, volume applicatif, wake mode MediaPlayer, arrêt à la fin/erreur et limite de dix minutes. Il ne modifie pas le volume système ni les restrictions de confidentialité. `AdhanPlayback` expose l’état à l’écran de prière.
 
-Les connexions caméra sont liées au réseau Wi-Fi Android sélectionné, sans exiger sa validation Internet. La version accepte seulement les IPv4 privées littérales. Les services annoncés par ONVIF doivent désigner exactement l’hôte sélectionné. Les redirections HTTP sont désactivées et les réponses XML/JSON sont bornées ; les entités XML externes et DTD sont refusées. TLS garde la vérification standard. Le multicast ONVIF et les broadcasts sont les seules destinations de découverte particulières.
+`LocalFiles` copie les médias dans le stockage privé, prépare les ZIP de configuration sans secrets et valide les restaurations avant installation des fichiers. Limites de taille, noms UUID canoniques, détection de doublons, refus de traversal et contrôle des médias déclarés. Les sauvegardes Android automatiques restent exclues.
 
-RTSP et DVRIP sont souvent non chiffrés. Android autorise donc le trafic clair pour les périphériques locaux ; le filtrage applicatif contrôle les destinations. Les erreurs de bibliothèques ne sont pas recopiées dans l’interface : seuls les types/codes et messages contrôlés y entrent, pour éviter de journaliser des URL ou secrets.
+## Ressources et sécurité
 
-Le fichier de configuration complet est chiffré AES-256-GCM avec une clé Android Keystore et écrit atomiquement. Les sauvegardes/transferts Android sont exclus. L’export manuel retire le mot de passe, l’URL RTSP entière et l’autorisation PTZ DVRIP ; il faut les renseigner après restauration. Aucun secret n’est intégré au build, aucun compte constructeur ni télémétrie ajouté.
+Un flux vidéo par défaut, deux configurables sur dashboard ; aucun décodage illimité. Veille, arrière-plan, vidéo masquée et protection thermique/batterie suspendent les lecteurs. Mesures bornées à 120 échantillons et journal borné à 200 entrées. Les métriques ne prouvent pas une stabilité longue durée.
 
-## Évolution après validation matérielle
+Sockets caméra liées au Wi-Fi et adresses privées littérales. Pas de redirection HTTP, TLS standard conservé, réponses XML/JSON bornées, DTD et entités externes interdites. Aucun mot de passe par défaut essayé ; budget de login DVRIP partagé pendant la session. Les exceptions brutes et URL secrètes ne sont pas recopiées dans les journaux.
 
-La preuve utilise un fichier chiffré pour un seul équipement ; Room et DataStore ne sont pas nécessaires pour ce petit périmètre. Le futur catalogue d’équipements, les dispositions de widgets, l’historique et les règles seront persistés dans Room ; les préférences non sensibles pourront migrer vers DataStore, avec migration explicite de version. L’injection manuelle suffit ici ; Hilt n’est pas nécessaire avant cette croissance.
+## Sources
 
-Les widgets futurs consommeront des modèles et des événements du domaine, et pas un protocole caméra concret. La navigation multi-écrans pourra adopter Navigation Compose et des modules fonctionnels quand le dashboard commence. Les textes de cette preuve sont français ; l’extraction complète en ressources et la localisation font partie du jalon dashboard avant l’ajout d’une autre langue.
+Les invocations embarquées sont des versets complets issus de Tanzil, avec traduction/notes QuranEnc French Montada 1.0.0, copiés sans modification depuis une révision figée de risan/quran-json. Notices de source et licences dans l’APK et `third_party/`. Pas de corpus religieux généré. Aucun enregistrement audio tiers distribué.
+
+Room/DataStore et Navigation Compose ne sont pas ajoutés mécaniquement : cette V1 reste une activité et une configuration chiffrée. Les modèles de domaine et versions de schéma permettent une migration lorsque le catalogue/historique grandira. Les ressources de traduction complètes, connecteurs externes, scènes avancées et Tesla restent des extensions distinctes ; voir les limites V1.

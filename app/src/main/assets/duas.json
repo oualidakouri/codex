@@ -1,0 +1,104 @@
+{
+  "edition": "Tanzil Uthmani · QuranEnc French Montada / Noor International Center 1.0.0",
+  "revision": "6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123",
+  "sources": [
+    {
+      "path": "data/tanzil/uthmani.json",
+      "url": "https://tanzil.net/pub/download/index.php?quranType=uthmani&outType=txt-2&agree=true",
+      "source": "tanzil.net",
+      "license": "Tanzil Quran Text / Copyright (C) 2007-2021 Tanzil Project / Creative Commons Attribution 3.0. Permission is granted to copy and distribute verbatim copies of this text, but CHANGING IT IS NOT ALLOWED.",
+      "license_status": "granted",
+      "license_url": "https://tanzil.net/docs/text_license",
+      "sha256": "adaebb377c60eba1bab6ef652959c7a0b4ccb4d0ca42145945c14ecdbeb4b761",
+      "bytes": 1764243,
+      "revision": "e20bba6abe2cc37f77f5aae5266f39cc55b9ca77"
+    },
+    {
+      "path": "data/quranenc/french_montada.json",
+      "url": "https://quranenc.com/downloads/sqlite/french_montada.zip",
+      "source": "quranenc.com/french_montada v1.0.0",
+      "license": "QuranEnc.com permits download and re-publication of translation contents on 7 conditions: no modification/addition/deletion; credit the publisher and QuranEnc.com; state the version number; keep the transcript information; report notes back; keep up to date with the latest version; no inappropriate advertising.",
+      "license_status": "granted",
+      "license_url": "https://quranenc.com/en/home/api",
+      "sha256": "ce010ea175f02d592dc76e8c066b58e5d600061c86999c00d1da9d2fcea675ad",
+      "bytes": 1325634,
+      "revision": "e20bba6abe2cc37f77f5aae5266f39cc55b9ca77",
+      "source_metadata": {
+        "provider": "quranenc",
+        "key": "french_montada",
+        "language": "fr",
+        "direction": "ltr",
+        "title": "French translation - Noor International Center",
+        "version": "1.0.0",
+        "browse_url": "https://quranenc.com/en/browse/french_montada/",
+        "terms_url": "https://quranenc.com/en/home/api"
+      }
+    }
+  ],
+  "duas": [
+    {
+      "id": "quran-3-8",
+      "title": "Guidée et miséricorde",
+      "arabic": "رَبَّنَا لَا تُزِغْ قُلُوبَنَا بَعْدَ إِذْ هَدَيْتَنَا وَهَبْ لَنَا مِن لَّدُنكَ رَحْمَةً إِنَّكَ أَنتَ ٱلْوَهَّابُ",
+      "french": "8. Seigneur ! Ne fais pas dévier nos cœurs après nous avoir guidés ; donne- nous Ta grâce, car c’est Toi le Suprême Donateur !",
+      "footnotes": "",
+      "source": "Coran 3:8",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-14-41",
+      "title": "Le pardon",
+      "arabic": "رَبَّنَا ٱغْفِرْ لِى وَلِوَٰلِدَىَّ وَلِلْمُؤْمِنِينَ يَوْمَ يَقُومُ ٱلْحِسَابُ",
+      "french": "41. Seigneur ! Accorde-moi le pardon ainsi qu’à mes parents et aux croyants le jour où seront dressés les comptes. »",
+      "footnotes": "",
+      "source": "Coran 14:41",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-2-201",
+      "title": "Le bien ici-bas et dans l’au-delà",
+      "arabic": "وَمِنْهُم مَّن يَقُولُ رَبَّنَآ ءَاتِنَا فِى ٱلدُّنْيَا حَسَنَةً وَفِى ٱلْـَٔاخِرَةِ حَسَنَةً وَقِنَا عَذَابَ ٱلنَّارِ",
+      "french": "201. Et il en est qui disent : « Seigneur ! Puisses-Tu nous accorder un bienfait en ce bas monde et un bienfait dans l’autre monde, et nous préserver du supplice du Feu ! »",
+      "footnotes": "",
+      "source": "Coran 2:201",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-25-74",
+      "title": "La famille",
+      "arabic": "وَٱلَّذِينَ يَقُولُونَ رَبَّنَا هَبْ لَنَا مِنْ أَزْوَٰجِنَا وَذُرِّيَّٰتِنَا قُرَّةَ أَعْيُنٍ وَٱجْعَلْنَا لِلْمُتَّقِينَ إِمَامًا",
+      "french": "74. Et ceux, enfin, qui disent : « Seigneur ! Daigne faire de nos épouses et de notre progéniture une joie pour nos cœurs et pour nos yeux, et veuille faire de nous des exemples à suivre par les gens pieux. »",
+      "footnotes": "",
+      "source": "Coran 25:74",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-3-147",
+      "title": "Pardon et constance",
+      "arabic": "وَمَا كَانَ قَوْلَهُمْ إِلَّآ أَن قَالُوا۟ رَبَّنَا ٱغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِىٓ أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَٱنصُرْنَا عَلَى ٱلْقَوْمِ ٱلْكَٰفِرِينَ",
+      "french": "147. Ils ne faisaient que dire : « Ô Seigneur ! Pardonne-nous nos péchés et nos excès dans notre comportement, affermis nos pas et fais-nous triompher des peuples mécréants. »",
+      "footnotes": "",
+      "source": "Coran 3:147",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-23-109",
+      "title": "Foi et miséricorde",
+      "arabic": "إِنَّهُۥ كَانَ فَرِيقٌ مِّنْ عِبَادِى يَقُولُونَ رَبَّنَآ ءَامَنَّا فَٱغْفِرْ لَنَا وَٱرْحَمْنَا وَأَنتَ خَيْرُ ٱلرَّٰحِمِينَ",
+      "french": "109. Il y avait, parmi Mes serviteurs, un groupe qui disait : « Seigneur, nous avons cru, pardonne-nous donc (nos péchés) et fais-nous miséricorde, car Tu es le Meilleur des miséricordieux. »",
+      "footnotes": "",
+      "source": "Coran 23:109",
+      "category": "Invocations coraniques"
+    },
+    {
+      "id": "quran-59-10",
+      "title": "Pour nos frères dans la foi",
+      "arabic": "وَٱلَّذِينَ جَآءُو مِنۢ بَعْدِهِمْ يَقُولُونَ رَبَّنَا ٱغْفِرْ لَنَا وَلِإِخْوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلْإِيمَٰنِ وَلَا تَجْعَلْ فِى قُلُوبِنَا غِلًّا لِّلَّذِينَ ءَامَنُوا۟ رَبَّنَآ إِنَّكَ رَءُوفٌ رَّحِيمٌ",
+      "french": "10. Et (le butin revient également à) ceux qui, arrivés plus tard (à Médine), disent : « Seigneur, veuille nous pardonner, ainsi qu’à nos frères qui nous ont précédés dans la foi ! Ne mets point de rancune dans nos cœurs envers ceux qui ont cru ! Seigneur, Tu es si Compatissant et Tout Miséricordieux ! »",
+      "footnotes": "",
+      "source": "Coran 59:10",
+      "category": "Invocations coraniques"
+    }
+  ],
+  "notice": "Tanzil Quran Text. Copyright (C) 2007-2021 Tanzil Project. License: Creative Commons Attribution 3.0. This copy of the Quran text is carefully produced, highly verified and continuously monitored by a group of specialists in Tanzil Project. TERMS OF USE: Permission is granted to copy and distribute verbatim copies of this text, but CHANGING IT IS NOT ALLOWED. This Quran text can be used in any website or application, provided that its source (Tanzil Project) is clearly indicated, and a link is made to tanzil.net to enable users to keep track of changes. This copyright notice shall be included in all verbatim copies of the text, and shall be reproduced appropriately in all files derived from or containing substantial portion of this text. Please check updates at: http://tanzil.net/updates/"
+}

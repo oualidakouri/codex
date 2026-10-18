@@ -53,7 +53,7 @@ fun RtspVideo(config: CameraConfig, vm: ProbeViewModel, modifier: Modifier = Mod
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 errorCode = error.errorCodeName; retry = true
-                vm.record("RTSP", Evidence.FAILED, "${error.errorCodeName} · reprise ${attempt + 1}/5 au maximum. Aucune URL ni donnée secrète journalisée.")
+                vm.record("RTSP", Evidence.FAILED, "${error.errorCodeName} · $attempt/5 reprise(s) effectuée(s). ${if (attempt < 5) "Nouvelle reprise programmée." else "Relancer manuellement."}")
             }
         }
         val analytics = object : AnalyticsListener {

@@ -10,6 +10,10 @@ import fr.maisonos.core.vendor.ptz.PtzCommand
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.time.LocalTime
+import java.time.Instant
+import android.net.Uri
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import javax.net.SocketFactory
 
 data class ProbeState(
@@ -29,6 +33,8 @@ data class ProbeState(
     val motionFrames: Long = 0,
     val motionEvents: Long = 0,
     val animation: Boolean = false,
+    val eventRule: LocalRule? = null,
+    val eventSimulated: Boolean = true,
     val onvifPtz: Boolean = false,
     val dvripConnected: Boolean = false,
     val diagnostics: Map<String, Diagnostic> = listOf("Tablette", "Wi-Fi / découverte", "DVRIP", "ONVIF", "RTSP", "PTZ", "Présence", "Veille", "Performance", "Audio / adhan", "Calcul salat", "Capteurs", "Animations", "Sans Internet").associateWith { Diagnostic(it) },
@@ -47,15 +53,20 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
     private var keepAlive: Job? = null
     private var operation: Job? = null
     private val loginLimiter = LoginLimiter()
+    private val configMutex = Mutex()
+    private val ruleEngine = RuleEngine()
+    private var eventJob: Job? = null
     private var lastInteraction = SystemClock.elapsedRealtime()
     private val started = SystemClock.elapsedRealtime()
     init {
         viewModelScope.launch {
             simulation.events.collect { event ->
                 record("Capteurs", Evidence.SIMULATED, "Événement local ${event.type} : boîte aux lettres. Aucun capteur réel connecté.")
-                _state.update { it.copy(animation = true, sleeping = false) }
+                val rule = ruleEngine.match(_state.value.config.home.rules, "mailbox", SystemClock.elapsedRealtime()).firstOrNull()
+                if (rule != null) playRule(rule, true)
+                else _state.update { it.copy(animation = true, sleeping = false, eventRule = null) }
                 record("Animations", Evidence.SIMULATED, "Animation Compose de démonstration. Import vidéo prévu dans une phase ultérieure.")
-                launch { delay(4000); dismissAnimation() }
+                if (rule == null) launch { delay(4000); dismissAnimation() }
             }
         }
         viewModelScope.launch {
@@ -66,8 +77,8 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
             val report = withContext(Dispatchers.Default) { DeviceDiagnostics.report(app) }
             _state.update { it.copy(report = report) }
             record("Tablette", Evidence.OBSERVED, "Caractéristiques fournies par Android ; aucune valeur commerciale supposée.")
-            record("Calcul salat", Evidence.UNAVAILABLE, "Phase ultérieure : aucun calcul ni horaire fictif.")
-            record("Audio / adhan", Evidence.NOT_TESTED, "Test audio local disponible ; programmation de l’adhan prévue après la preuve matérielle.")
+            reschedulePrayers()
+            record("Audio / adhan", Evidence.NOT_TESTED, "Adhan local via AlarmManager et fichier personnel. Vérifier autorisations et tester l’écoute dans Salat.")
             while (isActive) {
                 val r = withContext(Dispatchers.IO) { DeviceDiagnostics.sample(app, started) }
                 val wifi = DeviceDiagnostics.wifi(app)
@@ -110,13 +121,63 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         operation = viewModelScope.launch {
             try {
                 disconnect()
-                withContext(Dispatchers.IO) { config.validate(); store.save(config) }
-                _state.update { it.copy(config = config) }; log("Configuration chiffrée enregistrée sur la tablette.")
+                persist { config }
+                log("Configuration chiffrée enregistrée sur la tablette.")
             } catch (e: CancellationException) { throw e }
             catch (_: Exception) { log("Enregistrement refusé : vérifier adresse locale, ports et réglages.") }
             finally { _state.update { it.copy(busy = false) } }
         }
     }
+    private suspend fun persist(transform: (ProbeConfig) -> ProbeConfig) = configMutex.withLock {
+        val old = _state.value.config
+        var next = transform(old).migrated()
+        if (next.camera.host.isNotBlank()) {
+            val cameras = next.home.cameras.toMutableList()
+            val index = cameras.indexOfFirst { it.id == next.camera.id }
+            if (index < 0) cameras += next.camera else cameras[index] = next.camera
+            next = next.copy(home = next.home.copy(cameras = cameras))
+        }
+        withContext(Dispatchers.IO) { next.validate(); store.save(next) }
+        _state.update { it.copy(config = next) }
+        if (old.home.prayer != next.home.prayer) reschedulePrayers()
+    }
+    fun updateHome(transform: (HomeConfig) -> HomeConfig) { viewModelScope.launch {
+        try { persist { old -> old.copy(home = transform(old.home)) } }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { log("Réglage refusé : données invalides ou stockage indisponible.") }
+    } }
+    fun selectCamera(camera: CameraConfig) { save(_state.value.config.copy(camera = camera)) }
+    fun newCamera() { save(_state.value.config.copy(camera = CameraConfig())) }
+    fun removeCamera(id: String) { viewModelScope.launch {
+        try {
+            disconnect(); persist { old ->
+                val remaining = old.home.cameras.filterNot { it.id == id }
+                old.copy(camera = if (old.camera.id == id) remaining.firstOrNull() ?: CameraConfig() else old.camera, home = old.home.copy(cameras = remaining))
+            }
+        } catch (_: Exception) { log("Suppression de caméra impossible.") }
+    } }
+    fun importMedia(uri: Uri, kind: MediaKind) { viewModelScope.launch {
+        try {
+            val media = withContext(Dispatchers.IO) { LocalFiles.import(getApplication(), uri, kind) }
+            persist { it.copy(home = it.home.copy(media = it.home.media + media)) }
+            log("Média importé et conservé localement.")
+        } catch (_: Exception) { log("Import refusé : fichier compatible de 100 Mo maximum requis.") }
+    } }
+    suspend fun backup(uri: Uri) = withContext(Dispatchers.IO) { LocalFiles.backup(getApplication(), uri, _state.value.config) }
+    fun restore(uri: Uri) { viewModelScope.launch {
+        try {
+            val restored = withContext(Dispatchers.IO) { LocalFiles.restore(getApplication(), uri) }
+            disconnect(); persist { restored }; log("Sauvegarde restaurée avec médias. Ressaisir mots de passe et URL RTSP.")
+        } catch (_: Exception) { log("Restauration refusée : archive invalide, trop volumineuse ou incompatible.") }
+    } }
+    fun reschedulePrayers() { viewModelScope.launch {
+        try {
+            val config = _state.value.config
+            val planned = withContext(Dispatchers.IO) { AdhanScheduler.schedule(getApplication(), config) }
+            record("Calcul salat", if (config.home.prayer.configured) Evidence.OBSERVED else Evidence.NOT_TESTED,
+                if (config.home.prayer.configured) "Calcul local Adhan Kotlin actif ; ${planned.size} alarme(s) à venir. ${if (AdhanScheduler.exactAllowed(getApplication())) "Autorisation exacte disponible." else "Autorisation exacte manquante : horaires d’alarme approximatifs."}" else "Choisir une ville ou saisir les coordonnées dans Salat.")
+        } catch (_: Exception) { record("Calcul salat", Evidence.FAILED, "Calcul impossible : vérifier position, méthode, fuseau et ajustements. Aucun horaire inventé.") }
+    } }
     suspend fun exportConfig(): String = withContext(Dispatchers.IO) { store.export(_state.value.config) }
     fun importConfig(text: String) {
         try { save(store.parseImport(text)); log("Import : mots de passe et URL RTSP exclus ; renseigner à nouveau les secrets.") }
@@ -131,6 +192,12 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         finally { if (lock.isHeld) lock.release() }
         _state.update { it.copy(discovered = found) }
         record("Wi-Fi / découverte", Evidence.OBSERVED, "Fenêtre de 5 s terminée : ${found.size} réponse(s) de protocole. Absence de réponse ≠ absence de caméra. Ajout manuel disponible.")
+    }
+    fun deepDiscover() = task("Wi-Fi / découverte") {
+        val wifi = DeviceDiagnostics.wifi(getApplication()) ?: error("Wi-Fi absent")
+        val found = withTimeout(35000) { LanUnicastProbe(wifi.network.socketFactory).scanSegment(wifi.address) }
+        _state.update { it.copy(discovered = (it.discovered + found).distinctBy { c -> "${c.host}/${c.protocol}" }) }
+        record("Wi-Fi / découverte", Evidence.OBSERVED, "Recherche directe du segment ${wifi.address.substringBeforeLast('.')}.0/24 terminée : ${found.distinctBy { it.host }.size} hôte(s) avec réponse DVRIP/RTSP. Aucun mot de passe essayé.")
     }
     fun connectDvrip() = task("DVRIP") {
         val target = _state.value.config.camera
@@ -164,7 +231,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(onvifPtz = false) }
         val s = withContext(Dispatchers.IO) { client.inspect() }
         _state.update { it.copy(onvifPtz = s.continuousPanTilt) }
-        s.streamUrl?.let { uri -> _state.update { it.copy(config = it.config.copy(camera = it.config.camera.copy(rtspUrl = uri))) } }
+        s.streamUrl?.let { uri -> persist { it.copy(camera = it.camera.copy(rtspUrl = uri)) } }
         record("ONVIF", Evidence.OBSERVED, "Profil média obtenu. URI RTSP : ${if (s.streamUrl != null) "obtenue (à tester)" else "indisponible"}. PTZ continu déclaré : ${s.continuousPanTilt}.")
     }
     fun startVideo() {
@@ -184,7 +251,20 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
     fun simulateEvent() {
         if (_state.value.simulation) viewModelScope.launch { simulation.mailboxOpened() }
     }
-    fun dismissAnimation() { _state.update { it.copy(animation = false) } }
+    fun dismissAnimation() { eventJob?.cancel(); _state.update { it.copy(animation = false, eventRule = null) } }
+    fun testRule(rule: LocalRule) { playRule(rule, true) }
+    private fun playRule(rule: LocalRule, simulated: Boolean) {
+        eventJob?.cancel()
+        eventJob = viewModelScope.launch {
+            delay(rule.delaySeconds * 1000L)
+            if (!_state.value.foreground) return@launch
+            wake("événement local")
+            _state.update { it.copy(animation = true, eventRule = rule, eventSimulated = simulated) }
+            record("Animations", if (simulated) Evidence.SIMULATED else Evidence.OBSERVED, if (simulated) "Test manuel d’une règle locale ; aucun capteur réel supposé." else "Règle déclenchée par un mouvement de la caméra frontale.")
+            delay(rule.durationSeconds * 1000L)
+            _state.update { it.copy(animation = false, eventRule = null) }
+        }
+    }
     fun sleep() {
         stopVideo(); stopPtz()
         _state.update { it.copy(sleeping = true) }
@@ -207,10 +287,12 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         if (firstFrame) record("Présence", Evidence.OBSERVED, "Première image analysée localement. Détection de mouvement à tester devant la tablette.")
         if (firstDetection) record("Présence", Evidence.OBSERVED, "Variation de luminance détectée. Présence humaine et faux positifs à vérifier sur place.")
         if (detected) { interact(); if (_state.value.sleeping) wake("mouvement détecté localement") }
+        if (detected && !_state.value.animation) ruleEngine.match(_state.value.config.home.rules, "presence", SystemClock.elapsedRealtime()).firstOrNull()?.let { playRule(it, false) }
     }
     fun foreground(active: Boolean) {
         _state.update { it.copy(foreground = active) }
         if (!active) {
+            dismissAnimation()
             operation?.cancel(); stopVideo(); enablePresence(false)
             viewModelScope.launch { disconnect() }
         } else interact()

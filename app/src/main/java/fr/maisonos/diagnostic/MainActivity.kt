@@ -36,6 +36,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.ViewModelProvider
 import fr.maisonos.core.*
 import fr.maisonos.core.vendor.ptz.PtzCommand
 import kotlinx.coroutines.*
@@ -48,15 +49,19 @@ class MainActivity : ComponentActivity() {
     private lateinit var model: ProbeViewModel
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Initialize before onResume, including when the same ViewModel survives rotation.
+        model = ViewModelProvider(this)[ProbeViewModel::class.java]
         WindowCompat.getInsetsController(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
         setContent {
-            val vm: ProbeViewModel = viewModel(); model = vm
+            val vm = model
             val state by vm.state.collectAsStateWithLifecycle()
-            MaterialTheme(colorScheme = darkColorScheme(primary = Color(0xFF6AE0C2), background = Color(0xFF0B121B),
-                surface = Color(0xFF141F2B), onSurface = Color(0xFFE6EDF5), secondary = Color(0xFF9FAFC4))) {
+            val accent = when (state.config.home.accent) { "blue" -> Color(0xFF8FBAFF); "amber" -> Color(0xFFF1C983); else -> Color(0xFF6AE0C2) }
+            MaterialTheme(colorScheme = if (state.config.home.dark) darkColorScheme(primary = accent, background = Color(0xFF0B121B),
+                surface = Color(0xFF141F2B), onSurface = Color(0xFFE6EDF5), secondary = Color(0xFF9FAFC4))
+                else lightColorScheme(primary = when (state.config.home.accent) { "blue" -> Color(0xFF2B5B9C); "amber" -> Color(0xFF8F5A17); else -> Color(0xFF246A60) }, background = Color(0xFFF3F5F5), surface = Color.White, secondary = Color(0xFF596C7D))) {
                 LaunchedEffect(state.config.keepAwake, state.foreground) {
                     if (state.config.keepAwake && state.foreground) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -64,11 +69,11 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(state.sleeping) {
                     window.attributes = window.attributes.apply { screenBrightness = if (state.sleeping) 0.01f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE }
                 }
-                MaisonProbe(state, vm)
+                MaisonApp(state, vm)
             }
         }
     }
-    override fun onResume() { super.onResume(); if (::model.isInitialized) model.foreground(true) }
+    override fun onResume() { super.onResume(); if (::model.isInitialized) { model.foreground(true); model.reschedulePrayers() } }
     override fun onPause() { if (::model.isInitialized) model.foreground(false); super.onPause() }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (::model.isInitialized && (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE)) model.interact()
@@ -76,64 +81,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-private val tabs = listOf("Diagnostics", "Caméra LAN", "Présence & veille", "Simulation", "Journal")
-
-@Composable
-fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
-    var tab by rememberSaveable { mutableIntStateOf(0) }
-    var fullVideo by remember { mutableStateOf(false) }
-    val widthPx = androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.width
-    val wide = with(androidx.compose.ui.platform.LocalDensity.current) { widthPx.toDp() >= 720.dp }
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).safeDrawingPadding()) {
-        Row(Modifier.fillMaxSize()) {
-            if (wide && !fullVideo) Column(Modifier.width(190.dp).fillMaxHeight().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("MAISON OS", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text("LABORATOIRE LOCAL", fontSize = 10.sp, color = MaterialTheme.colorScheme.secondary)
-                Spacer(Modifier.height(20.dp))
-                tabs.forEachIndexed { i, label ->
-                    if (tab == i) Button(onClick = {}, modifier = Modifier.fillMaxWidth()) { Text(label) }
-                    else TextButton(onClick = { vm.stopVideo(); vm.stopPtz(); tab = i; vm.interact() }, modifier = Modifier.fillMaxWidth()) { Text(label) }
-                }
-                Spacer(Modifier.weight(1f))
-                Text("PREUVE DE FAISABILITÉ\nv0.1 · APK native\nAucun cloud requis", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
-            }
-            Column(Modifier.weight(1f).fillMaxHeight().padding(if (wide) 20.dp else 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (!fullVideo) {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Column(Modifier.weight(1f)) {
-                            Text(if (wide) tabs[tab] else "Maison OS · ${tabs[tab]}", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-                            Text(if (s.simulation) "SIMULATION · aucune intégration matérielle validée" else "Tests réels · validation matérielle à effectuer", color = MaterialTheme.colorScheme.secondary, fontSize = 12.sp)
-                        }
-                        TextButton(onClick = { vm.sleep() }) { Text("Veille") }
-                    }
-                    if (!wide) PrimaryScrollableTabRow(selectedTabIndex = tab) {
-                        tabs.forEachIndexed { i, label -> Tab(selected = tab == i, onClick = { vm.stopVideo(); vm.stopPtz(); tab = i; vm.interact() }, text = { Text(label) }) }
-                    }
-                }
-                when (tab) {
-                    0 -> DiagnosticsPage(s, vm)
-                    1 -> CameraPage(s, vm, fullVideo) { fullVideo = it }
-                    2 -> PresencePage(s, vm)
-                    3 -> SimulationPage(s, vm)
-                    else -> JournalPage(s, vm)
-                }
-            }
-        }
-        // Kept mounted while the software screensaver overlays the foreground app.
-        if (s.cameraEnabled && s.foreground) Box(Modifier.align(Alignment.BottomEnd)) { PresenceCamera(vm, showPreview = false) }
-        if (s.sleeping) SleepScreen(vm)
-        if (s.animation) Box(Modifier.fillMaxSize().background(Color(0xF00B121B)).clickable { vm.dismissAnimation() }, contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text("✉", fontSize = 72.sp, color = MaterialTheme.colorScheme.primary)
-                Text("Tu as du courrier !", fontSize = 36.sp, fontWeight = FontWeight.Bold)
-                Text("SIMULATION · événement local", color = MaterialTheme.colorScheme.secondary)
-                Text("Toucher pour fermer")
-            }
-        }
-    }
-}
-
-@Composable private fun Panel(title: String, content: @Composable ColumnScope.() -> Unit) {
+@Composable internal fun Panel(title: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(title, fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
@@ -142,7 +90,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
     }
 }
 
-@Composable private fun Status(d: Diagnostic) {
+@Composable internal fun Status(d: Diagnostic) {
     val (label, color) = when (d.evidence) {
         Evidence.NOT_TESTED -> "NON VÉRIFIÉ" to Color(0xFF9FAFC4)
         Evidence.RUNNING -> "EN COURS" to Color(0xFF7CB7F5)
@@ -180,7 +128,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
                     }
                     audio = MediaPlayer().apply {
                         setDataSource(file.absolutePath)
-                        setOnPreparedListener { it.start(); vm.record("Audio / adhan", Evidence.RUNNING, "Lecture du fichier personnel local. Audibilité à vérifier ; programmation adhan non implémentée.") }
+                        setOnPreparedListener { it.start(); vm.record("Audio / adhan", Evidence.RUNNING, "Lecture du fichier personnel local. Audibilité à vérifier ; la programmation est disponible dans Salat.") }
                         setOnCompletionListener { it.release(); audio = null; vm.record("Audio / adhan", Evidence.OBSERVED, "Lecture locale terminée selon Android. Son audible à confirmer sur la tablette.") }
                         setOnErrorListener { p, _, _ -> p.release(); audio = null; vm.record("Audio / adhan", Evidence.FAILED, "Format audio non pris en charge."); true }
                         prepareAsync()
@@ -212,7 +160,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
                 if (first != null && last != null) vm.record("Performance", Evidence.OBSERVED, "${s.samples.size} mesures sur ${(last.elapsed - first.elapsed) / 1000}s ; PSS ${first.pssMb} → ${last.pssMb} Mo. Stabilité longue durée non validée.")
             }) { Text("Relever les mesures de performance") }
             OutlinedButton(onClick = { context.startActivity(Intent(Settings.ACTION_WIFI_SETTINGS)) }) { Text("Ouvrir les réglages Wi-Fi") }
-            Text("Sans Internet : couper l’accès WAN du routeur en conservant le Wi-Fi, puis refaire découverte, vidéo, PTZ et présence. Le cloud de développement ne peut pas certifier ce test.", fontSize = 12.sp)
+            Text("Sans Internet : couper l’accès WAN du routeur en conservant le Wi-Fi, puis refaire découverte, vidéo, PTZ et présence. Vérifier chaque fonction avec les équipements réels.", fontSize = 12.sp)
             OutlinedButton(onClick = { vm.record("Sans Internet", Evidence.NOT_TESTED, "Procédure affichée. Aucun test WAN ni accès extérieur lancé ; coupure WAN et tests locaux à effectuer par l’utilisateur.") }) { Text("Consigner le test hors Internet à effectuer") }
         }
         Panel("Matrice de diagnostic") {
@@ -224,6 +172,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
 @Composable fun CameraPage(s: ProbeState, vm: ProbeViewModel, full: Boolean, setFull: (Boolean) -> Unit) {
     var config by remember(s.config) { mutableStateOf(s.config) }
     val c = config.camera
+    var showPassword by remember(c.id) { mutableStateOf(false) }
     fun camera(edit: (CameraConfig) -> CameraConfig) { config = config.copy(camera = edit(config.camera)) }
     if (s.video && s.foreground && !s.sleeping) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -241,26 +190,33 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
         Panel("Découverte sur mon Wi-Fi") {
             Text("DVRIP UDP 34569 et ONVIF WS-Discovery. Recherche de 5 secondes, sans essai d’authentification ni balayage du réseau.", fontSize = 12.sp)
             Button(enabled = !s.busy && !s.simulation, onClick = vm::discover) { Text(if (s.busy) "Test en cours…" else "Rechercher mes caméras") }
-            s.discovered.forEach { found ->
+            OutlinedButton(enabled = !s.busy && !s.simulation, onClick = vm::deepDiscover) { Text("Recherche approfondie du segment Wi-Fi /24") }
+            Text("Le scan n’est pas limité par le nombre de vidéos. La recherche approfondie vérifie DVRIP et RTSP sur 254 adresses au maximum, sans mot de passe. Une caméra peut annoncer plusieurs protocoles.", fontSize = 11.sp)
+            s.discovered.groupBy { it.host }.forEach { (host, protocols) ->
                 OutlinedButton(onClick = {
-                    camera { old -> old.copy(host = found.host,
-                        dvripPort = if (found.protocol == "DVRIP") found.port else old.dvripPort,
-                        onvifPort = if (found.protocol == "ONVIF") found.port else old.onvifPort,
-                        onvifPath = if (found.protocol == "ONVIF") runCatching { java.net.URI(found.endpoint).path }.getOrDefault(old.onvifPath) else old.onvifPath) }
-                }) { Text("${found.host} · ${found.protocol} : ${found.port} → utiliser") }
+                    camera { old -> old.copy(host = host,
+                        dvripPort = protocols.firstOrNull { it.protocol == "DVRIP" }?.port ?: old.dvripPort,
+                        onvifPort = protocols.firstOrNull { it.protocol == "ONVIF" }?.port ?: old.onvifPort,
+                        onvifPath = protocols.firstOrNull { it.protocol == "ONVIF" }?.let { runCatching { java.net.URI(it.endpoint).path }.getOrDefault(old.onvifPath) } ?: old.onvifPath) }
+                }) { Text("$host · ${protocols.joinToString { "${it.protocol}:${it.port}" }} → utiliser") }
             }
             Text(s.diagnostics["Wi-Fi / découverte"]!!.detail, fontSize = 12.sp)
         }
         Panel("Caméra locale · ajout manuel") {
             Text("Enregistrer avant les tests. L’URL RTSP exacte dépend du firmware : utiliser de préférence le sous-flux basse résolution ou l’URI retournée par ONVIF.", fontSize = 12.sp)
             Field("Nom", c.name, { v -> camera { it.copy(name = v) } })
+            Field("Pièce / emplacement", c.room, { v -> camera { it.copy(room = v) } })
             Field("Adresse IPv4 locale", c.host, { v -> camera { it.copy(host = v.trim()) } })
             Field("Identifiant", c.username, { v -> camera { it.copy(username = v) } })
-            OutlinedTextField(value = c.password, onValueChange = { v -> camera { it.copy(password = v) } }, label = { Text("Mot de passe") }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(value = c.password, onValueChange = { v -> camera { it.copy(password = v) } }, label = { Text("Mot de passe") },
+                visualTransformation = if (showPassword) androidx.compose.ui.text.input.VisualTransformation.None else PasswordVisualTransformation(),
+                trailingIcon = { TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) "Masquer" else "Afficher") } },
+                singleLine = true, modifier = Modifier.fillMaxWidth())
             PortField("Port DVRIP", c.dvripPort) { v -> camera { it.copy(dvripPort = v) } }
             PortField("Port ONVIF HTTP", c.onvifPort) { v -> camera { it.copy(onvifPort = v) } }
             Field("Chemin ONVIF", c.onvifPath, { v -> camera { it.copy(onvifPath = v) } })
             Field("URL RTSP sans identifiants", c.rtspUrl, { v -> camera { it.copy(rtspUrl = v.trim()) } })
+            Field("URL RTSP principale (plein écran, facultative)", c.mainRtspUrl, { v -> camera { it.copy(mainRtspUrl = v.trim()) } })
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = c.dvripPtzConfirmed, onCheckedChange = { v -> camera { it.copy(dvripPtzConfirmed = v) } })
                 Text("J’autorise le test PTZ DVRIP sur cette caméra motorisée. Je vérifierai son arrêt visuellement.", fontSize = 12.sp)
@@ -282,15 +238,15 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
     }
 }
 
-@Composable private fun Field(label: String, value: String, changed: (String) -> Unit) {
+@Composable internal fun Field(label: String, value: String, changed: (String) -> Unit) {
     OutlinedTextField(value = value, onValueChange = changed, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth())
 }
-@Composable private fun PortField(label: String, value: Int, changed: (Int) -> Unit) {
+@Composable internal fun PortField(label: String, value: Int, changed: (Int) -> Unit) {
     var text by remember(value) { mutableStateOf(value.toString()) }
     OutlinedTextField(value = text, onValueChange = { text = it; changed(it.toIntOrNull() ?: 0) }, label = { Text(label) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true, modifier = Modifier.fillMaxWidth())
 }
 
-@Composable private fun PtzControls(s: ProbeState, vm: ProbeViewModel) {
+@Composable internal fun PtzControls(s: ProbeState, vm: ProbeViewModel) {
     val supported = s.onvifPtz || (s.dvripConnected && s.config.camera.dvripPtzConfirmed)
     if (!supported) { Text("PTZ masqué : capacité ONVIF non détectée ou test DVRIP non autorisé.", fontSize = 12.sp); return }
     Text("PTZ ${if (s.onvifPtz) "ONVIF" else "DVRIP"} · impulsion courte · arrêt mécanique à vérifier", fontSize = 12.sp)
@@ -328,7 +284,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
         }
         Panel("Écran mural et veille") {
             Button(onClick = vm::sleep) { Text("Tester l’écran sombre / réveil") }
-            Text("Réveil par toucher ou mouvement si l’analyse est active. Aucun usage de Device Admin et aucun contournement de Doze. Horaires de salat : non configurés à ce stade.")
+            Text("Réveil par toucher ou mouvement si l’analyse est active. Aucun usage de Device Admin et aucun contournement de Doze. La prochaine salat est affichée si les coordonnées sont configurées.")
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Switch(checked = s.config.keepAwake, onCheckedChange = { vm.save(s.config.copy(keepAwake = it)) })
                 Text("Maintenir l’écran actif au premier plan")
@@ -347,7 +303,7 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
             Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = s.simulation, onCheckedChange = vm::setSimulation); Text("Mode simulation") }
             Text("Permet de tester un événement local et son affichage sans acheter de capteur. Ce test ne valide aucun équipement ni connexion réseau.")
             Button(enabled = s.simulation, onClick = vm::simulateEvent) { Text("Simuler : tu as du courrier !") }
-            Text("Calcul salat, automatisations configurables, import de vidéos et futurs widgets seront développés après validation de cette APK.", fontSize = 12.sp)
+            Text("Les widgets, horaires et règles locales se règlent dans Accueil, Salat et Événements. Les capteurs externes restent à intégrer selon leurs protocoles réels.", fontSize = 12.sp)
         }
     }
 }
@@ -399,18 +355,5 @@ fun MaisonProbe(s: ProbeState, vm: ProbeViewModel) {
             Text("L’export exclut mot de passe et URL RTSP, qui peut contenir des secrets dans son chemin. Les renseigner après restauration. Journal limité à 200 entrées, conservé uniquement pendant cette session.", fontSize = 12.sp)
         }
         Panel("Journal local") { s.logs.asReversed().forEach { Text(it, fontSize = 12.sp) } }
-    }
-}
-
-@Composable private fun SleepScreen(vm: ProbeViewModel) {
-    var now by remember { mutableStateOf(LocalTime.now()) }
-    LaunchedEffect(Unit) { while (true) { now = LocalTime.now(); delay(1000) } }
-    Box(Modifier.fillMaxSize().background(Color.Black).clickable { vm.wake() }, contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Text(now.format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 88.sp, fontWeight = FontWeight.Light, color = Color(0xFF7D8795))
-            Text(LocalDate.now().format(DateTimeFormatter.ofPattern("EEEE d MMMM", java.util.Locale.FRENCH)), color = Color(0xFF586271))
-            Text("Prochaine salat : non configurée · phase ultérieure", color = Color(0xFF586271))
-            Text("Toucher pour réveiller", color = Color(0xFF404956), fontSize = 12.sp)
-        }
     }
 }

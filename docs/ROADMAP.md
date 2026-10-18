@@ -1,6 +1,6 @@
 # Feuille de route et portes de validation
 
-## 0 — Preuve tablette/caméras, en cours
+## 0 — Preuve tablette/caméras, retour utilisateur reçu
 
 - [x] Initialiser le projet natif et une APK de diagnostic compilable.
 - [x] Tests JVM des primitives, échanges DVRIP et ONVIF sur serveurs locaux.
@@ -10,7 +10,7 @@
 - [ ] Confirmer vidéo, PTZ/STOP, reprise Wi-Fi, mouvement/veille et fonctionnement WAN coupé.
 - [ ] Obtenir un essai prolongé stable et corriger les défauts constatés.
 
-**La phase 0 n’est pas considérée terminée tant que ces fonctions critiques ne sont pas stabilisées sur le matériel.** Une fonction non fournie par une caméra est notée non supportée, sans bloquer les fonctions indépendantes.
+L’utilisateur a déclaré le diagnostic fonctionnel et confirmé vidéo et contrôle d’une caméra, puis demandé explicitement la V1. Ce retour autorise la suite ; il ne fournit pas de mesure de stabilité 24 h ni de résultat pour la seconde caméra absente du scan. Ces points restent séparés des fonctions indépendantes. La livraison actuelle est décrite dans README.md et docs/VALIDATION-V1.md.
 
 ## 1 — Architecture produit et dashboard
 

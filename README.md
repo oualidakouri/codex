@@ -1,77 +1,66 @@
-# Maison OS · Diagnostic Android
+# Maison OS · V1 Android
 
-Première preuve de faisabilité de Maison OS : une application Android native installable, exécutant ses tests directement sur la tablette. Aucun serveur, Home Assistant, Docker ou compte cloud n’est nécessaire à l’exécution.
+Tableau de bord mural pour tablette Android : salat et adhan hors ligne, douas sourcées, caméras locales, veille et événements. Application native Kotlin / Jetpack Compose, sans serveur ou Home Assistant obligatoire.
 
-## Télécharger l’APK déjà compilée
+## Installer l’APK
 
-**[Télécharger Maison OS Diagnostic 0.1.0 (.apk)](downloads/maison-os-diagnostic-0.1.0.apk?raw=true)**
+**[Télécharger Maison OS 1.0.0 (.apk)](downloads/maison-os-1.0.0.apk?raw=true)**
 
-Si le téléchargement ne démarre pas, ouvrir [la page du fichier APK](downloads/maison-os-diagnostic-0.1.0.apk), puis utiliser **Download raw file** (icône de téléchargement en haut à droite du fichier) dans GitHub, de préférence dans le navigateur. Pour un dépôt privé, se connecter au compte GitHub ayant accès au dépôt.
+Si le lien ne télécharge pas, ouvrir [la page du fichier](downloads/maison-os-1.0.0.apk), puis cliquer sur **Download raw file** en haut à droite dans GitHub. Ouvrir GitHub dans le navigateur ; se connecter si le dépôt est privé.
 
-L’APK de développement de 17 Mo est fournie dans `downloads/` pour ne pas dépendre des liens locaux de Codex. Les [rapports de vérification](downloads/verification/) et l’empreinte SHA-256 sont inclus. Voir [les instructions de téléchargement](downloads/README.md).
+La V1 se met à jour **par-dessus l’APK de diagnostic**, sans désinstallation : même identifiant `fr.maisonos.diagnostic` et même clé de développement dans cet environnement. La configuration existante est migrée, y compris la caméra sélectionnée et ses identifiants. Les APK générées ailleurs, notamment en CI, ont leur propre clé de développement ; utiliser l’APK fournie dans `downloads` pour cette mise à jour.
 
-**La phase dashboard n’est pas commencée.** Cette version sert à vérifier la tablette et les protocoles des caméras avant de poursuivre. Une adresse IP ou une réponse positive à une commande ne prouve jamais, à elle seule, une compatibilité complète.
+## Ce que contient cette V1
 
-## Application livrée
+- Dashboard avec vrai déplacement par appui long, redimensionnement par poignée, ajout/suppression, transparence, pages et profils. Dispositions paysage et portrait indépendantes.
+- Horloge, dates grégorienne/hégirienne, prochaine salat, compte à rebours, horaires, doua, caméras, état de la tablette et raccourcis.
+- Thèmes sombre/clair, couleurs et fond d’écran personnel.
+- Calcul local des cinq prières avec Adhan Kotlin : choix volontaire de ville ou coordonnées, fuseau IANA, méthode, madhab, hautes latitudes, ajustements, calendrier mensuel et correction hégirienne.
+- Adhan configurable par prière, audio personnel copié sur la tablette, récitation Fajr distincte, volume, silence horaire, écoute immédiate, test d’alarme dans 10 secondes et bouton d’arrêt. Reprogrammation après démarrage, changement d’heure/fuseau/date et mise à jour.
+- Sept invocations coraniques complètes, arabe vocalisé et traduction française reproduits sans modification, références, notes, favoris, historique et rotation quotidienne.
+- Catalogue de plusieurs caméras, migration de la caméra existante, découverte DVRIP/ONVIF répétée et recherche directe facultative DVRIP/RTSP sur le segment Wi-Fi /24. Les résultats sont regroupés par IP.
+- RTSP en widget et plein écran, sous-flux/principal configurables, PTZ selon les capacités testées. Un ou deux flux simultanés dans le dashboard, selon le réglage ; cette limite ne concerne pas le scan.
+- Veille sombre avec prochaine prière, réveil au toucher ou par mouvement frontal, analyse locale au premier plan, protection thermique/batterie et rôle de lanceur Android facultatif.
+- Règles locales pour courrier simulé, mouvement frontal et test manuel : délai, durée, repos entre événements, message, son/vidéo/image personnels et retour automatique.
+- Paramètres chiffrés Android Keystore, import/export ZIP avec médias, diagnostics et rapports.
 
-- Interface française sombre, paysage/portrait, navigation plein écran.
-- Version Android/API, correctif, écran, RAM exposée par Android, décodeurs et accélération matérielle déclarée.
-- PSS, tas Java, batterie, température batterie et état thermique Android ; historique borné et rapport exportable.
-- Découverte locale DVRIP UDP et ONVIF WS-Discovery, sans essai de mot de passe.
-- Configuration manuelle d’une caméra, authentification DVRIP-Web et interrogation ONVIF (profils/URI RTSP/capacité PTZ).
-- Un lecteur RTSP Media3 avec transport TCP, son coupé, journal du décodeur réellement choisi et reprise bornée après erreur.
-- PTZ en impulsions courtes : ONVIF si déclaré par la caméra, DVRIP après autorisation explicite. STOP au relâchement/annulation et après chaque impulsion. Le comportement mécanique reste à vérifier.
-- Analyse locale des variations de luminance de la caméra frontale, sans enregistrement/transmission d’images.
-- Écran sombre logiciel, réveil au toucher et par mouvement lorsque l’application reste au premier plan.
-- Import d’un fichier audio personnel pour tester la lecture locale. Aucun enregistrement religieux distribué sans autorisation.
-- Simulation explicite d’un événement courrier et de son animation.
-- Configuration chiffrée AES-GCM/Android Keystore, export/restauration sans mot de passe ni URL RTSP.
-- Candidat au rôle de lanceur Android, à choisir volontairement dans les réglages système.
+Les widgets et règles de simulation portent cette mention. Aucun capteur externe, compte cloud ou Tesla n’est simulé comme une connexion réelle.
 
-Voir [les limites Android et protocolaires](docs/LIMITATIONS.md), [l’architecture](ARCHITECTURE.md), [les tests](docs/VALIDATION.md) et [la feuille de route](docs/ROADMAP.md).
+## Premier lancement
 
-Le [rapport de livraison vérifiée](docs/BUILD-REPORT.md) distingue les 23 tests JVM et les 3 tests Android réussis sur émulateur des essais encore attendus sur le matériel réel.
+1. Installer la V1 par-dessus le diagnostic, puis ouvrir **Maison OS**.
+2. Dans **Salat → Ville et méthode de calcul**, choisir la position et vérifier les horaires par rapport à la mosquée. Aucune position personnelle n’est prédéfinie.
+3. Importer un audio personnel, choisir la récitation puis activer les prières voulues. Autoriser les alarmes exactes et les notifications depuis cet écran. Sans autorisation exacte, les horaires d’alarme sont approximatifs et Android peut refuser la lecture en arrière-plan.
+4. Dans **Caméras**, retrouver la caméra migrée et ajouter la seconde. Une caméra absente du broadcast peut être ajoutée manuellement ou trouvée par recherche approfondie. Deux protocoles sur la même IP ne représentent pas deux appareils.
+5. Dans **Accueil → Personnaliser**, ajouter un widget caméra puis choisir son équipement dans `⋯`. Utiliser un sous-flux basse résolution. Le nombre de flux est réglable dans **Paramètres**.
+6. Configurer les médias et la veille dans **Paramètres**, puis tester les règles dans **Événements**.
 
-## Compiler
+Voir [le guide V1](docs/V1-GUIDE.md), [les résultats et critères de validation](docs/VALIDATION-V1.md), [l’architecture](ARCHITECTURE.md) et [les limites](docs/LIMITATIONS-V1.md).
 
-Outils : JDK 21, Android SDK 36, Gradle 8.13 (wrapper et empreinte SHA-256 fournis). Le SDK et les dépendances nécessitent Internet **à la compilation**, pas un service en ligne à l’exécution.
+## Compiler et tester
 
-Depuis `/workspace/codex` dans cet environnement cloud :
+Dans le cloud, depuis `/workspace/codex` :
 
 ```sh
 python tools/bootstrap-cloud.py
 python tools/cloud-gradle.py :core:test :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug --no-daemon
 ```
 
-Le bootstrap installe les outils sous `/workspace`, conserve TLS et les vérifications d’intégrité, accepte les licences du SDK pour les composants demandés, et ne modifie aucun fichier source ou lockfile. Le wrapper cloud initialise le proxy Java à partir de la configuration existante, sans enregistrer ses valeurs dans le dépôt.
-
-Sur un poste Android Studio avec JDK 21 et SDK 36 configurés :
+Sur un poste Android configuré (JDK 21, SDK 36) :
 
 ```sh
-./gradlew :core:test :app:assembleDebug :app:lintDebug
+./gradlew :core:test :app:assembleDebug :app:assembleDebugAndroidTest :app:lintDebug
+./gradlew :app:connectedDebugAndroidTest
 ```
 
-APK : `app/build/outputs/apk/debug/app-debug.apk`. Identifiant : `fr.maisonos.diagnostic`. Android 8/API 26 minimum, Android 16/API 36 ciblé. Signature de développement générée localement dans `.gradle/`, exclue de Git ; conserver cette clé pour installer de futures mises à jour de cette APK. Aucune signature de production ou publication Play Store dans cette phase.
+Les tests instrumentés doivent être exécutés sur un appareil de développement : ils sauvegardent/restaurent sa configuration pendant les essais. Leur compilation ne vaut pas exécution. Sortie APK : `app/build/outputs/apk/debug/app-debug.apk`.
 
-## Installer et effectuer le premier essai
+Gradle 8.13, AGP 8.13.2, Kotlin 2.2.21. Android 8/API 26 minimum, Android 16/API 36 ciblé. Signature de développement locale conservée sous `.gradle/` et exclue de Git. Les dépendances nécessitent Internet à la compilation ; l’application n’en a pas besoin pour ses fonctions locales.
 
-1. Copier l’APK sur la tablette ; autoriser l’installation depuis la source choisie puis ouvrir Maison OS. Ou utiliser `adb install -r app/build/outputs/apk/debug/app-debug.apk` depuis un ordinateur de développement temporaire.
-2. Ouvrir **Diagnostics** et exporter le rapport initial. Vérifier la RAM physique exposée, l’API réelle et les décodeurs ; les caractéristiques commerciales ne sont pas présumées.
-3. Connecter la tablette au même Wi-Fi que les caméras. Ouvrir **Caméra LAN → Rechercher mes caméras**. L’ajout manuel reste disponible si le broadcast/multicast est bloqué.
-4. Renseigner l’IPv4 privée, les ports, l’identifiant et le mot de passe réels. Enregistrer avant de tester. Les ports 34567/8899 sont des valeurs usuelles modifiables, pas une preuve de compatibilité.
-5. Tester DVRIP puis ONVIF séparément. ONVIF peut renseigner une URI RTSP ; sinon saisir l’URL exacte fournie par le fabricant. Les identifiants se saisissent dans les champs dédiés. Certains firmwares ont des comptes RTSP distincts : modifier les identifiants et enregistrer avant le test correspondant.
-6. Afficher le flux RTSP, commencer par le sous-flux basse définition. Vérifier les images et le décodeur choisi. Aucun chemin RTSP ou protocole propriétaire n’est deviné.
-7. Tester le PTZ avec prudence, vérifier visuellement l’arrêt et exporter le résultat. Voir les réserves sur STOP dans les limites.
-8. Tester présence, veille, perte/reprise Wi-Fi et coupure WAN selon [la procédure de validation](docs/VALIDATION.md).
+## Sources et licences
 
-Les catégories « non vérifié », « observé par l’API », « échec », « simulé » et « non implémenté » restent distinctes. Un test sur serveur simulé ou émulateur ne valide pas les caméras réelles.
+- [Adhan Kotlin](https://github.com/batoulapps/adhan-kotlin), version 0.0.5, MIT : compatible avec le compilateur retenu. Les versions récentes utilisant Kotlin 2.4 ne sont pas introduites dans cette V1.
+- [iCSee Android](https://github.com/voidnullvalue/Icsee-android), composants DVRIP/PTZ sous MIT ; attributions conservées.
+- Arabe : [Tanzil](https://tanzil.net), CC BY 3.0, reproduction verbatim. Traduction : [QuranEnc / Noor International Center, French Montada 1.0.0](https://quranenc.com/en/browse/french_montada/). Sélection depuis risan/quran-json, avec empreintes, notices et licences conservées.
 
-## Périmètre reporté
-
-Calcul salat, programmation d’adhan, base de douas vérifiées, dashboard à widgets, QR iCSee, vidéo DVRIP, audio bidirectionnel, presets PTZ, stockage vidéo, connecteurs capteurs et automatisations configurables ne sont pas implémentés ici. L’écran de veille indique explicitement que la prochaine salat n’est pas configurée. Ces fonctions suivent la validation de cette preuve, dans l’ordre demandé.
-
-## Référence iCSee et licences
-
-Étude de [voidnullvalue/Icsee-android](https://github.com/voidnullvalue/Icsee-android), commit `74a2ed41923f1c2b3e880222aa3d76af10389c82` : README, PROTOCOL_NOTES, PROTOCOL_STATUS, SECURITY, découverte, session, PTZ et vidéo. Six fichiers de primitives sont adaptés sous MIT, avec [mentions conservées](third_party/ICSEE-LICENSE.txt) et copie de la licence dans les assets de l’APK. Voir [la provenance détaillée](docs/ICSEE-REFERENCE.md).
-
-L’application est un projet privé ; aucune licence générale du projet n’est choisie à la place du propriétaire. Les licences des dépendances et composants tiers continuent de s’appliquer.
+Les sources, versions et mentions sont accessibles dans **Paramètres → Sources et licences**, dans les assets et dans `third_party/`. Aucun fichier audio religieux tiers n’est distribué sans autorisation.
