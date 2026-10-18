@@ -8,6 +8,7 @@ APK `../maison-os-1.3.0.apk`, package `fr.maisonos.diagnostic`, code 13. Taille 
 - `android-targeted.txt` : **3 tests Android réussis sur l’APK finale** : caméra automatique, fermeture de la démonstration et sécurité de mise à jour. `android-before-camera-fix.txt` conserve la campagne précédente : six réussis, un échec caméra corrigé ensuite. Au total, sept scénarios distincts passent ; les autres résultats ne sont pas présentés comme une exécution sur l’APK finale.
 - `pumpkin-render.png` : pixels RGBA lus depuis un vrai framebuffer OpenGL ES de l’émulateur. Fond transparent et changement des pupilles vérifiés ; aucune caméra ni présence humaine simulée dans cette image de rendu.
 - `signature.txt` et `checksums.sha256` : signature historique et empreinte finale.
+- `github-download.json` : après publication, manifeste 1.3.0 et APK téléchargés via le réseau/proxy du cloud, HTTP 200 ; taille et SHA-256 conformes. Aucun accès anonyme depuis la tablette n’est déduit de ce contrôle.
 
 ## Scénarios Android de cette campagne
 
