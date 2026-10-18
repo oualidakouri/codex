@@ -23,8 +23,8 @@ fun defaultWidgets() = listOf(
     HomeWidget(kind = WidgetKind.TABLET, x = 0, y = 4, w = 3, h = 1),
     HomeWidget(kind = WidgetKind.SHORTCUTS, x = 0, y = 5, w = 6, h = 1),
     HomeWidget(kind = WidgetKind.WEATHER, x = 0, y = 6, w = 3, h = 3),
-    HomeWidget(kind = WidgetKind.QURAN, x = 3, y = 6, w = 3, h = 2),
-    HomeWidget(kind = WidgetKind.NEWS, x = 3, y = 8, w = 3, h = 3),
+    HomeWidget(kind = WidgetKind.QURAN, x = 3, y = 6, w = 3, h = 4),
+    HomeWidget(kind = WidgetKind.NEWS, x = 3, y = 10, w = 3, h = 3),
 )
 
 @Serializable
@@ -64,6 +64,7 @@ data class PrayerSettings(
     val theme: String = "classic", val dashboardRevision: Int = 1,
     val weather: WeatherSettings = WeatherSettings(), val switches: List<LocalSwitch> = emptyList(),
     val updates: UpdateSettings = UpdateSettings(),
+    val pumpkin: PumpkinSettings = PumpkinSettings(),
     val quran: QuranSettings = QuranSettings(), val news: NewsSettings = NewsSettings(),
 ) {
     fun validate() {
@@ -79,7 +80,7 @@ data class PrayerSettings(
         require(maxStreams in 1..2 && accent in setOf("mint", "blue", "amber"))
         require(theme == "classic" || ThemeCatalog.themes.any { it.id == theme })
         require(dashboardRevision in 0..1)
-        weather.validate(); updates.validate(); quran.validate(); news.validate(); switches.forEach { it.validate() }
+        weather.validate(); updates.validate(); pumpkin.validate(); quran.validate(); news.validate(); switches.forEach { it.validate() }
         require(switches.size <= 100 && switches.distinctBy { it.id }.size == switches.size)
         require(media.all { runCatching { UUID.fromString(it.id) }.isSuccess && it.name.length <= 180 && it.bytes in 0..104857600 })
         require(rules.all { it.durationSeconds in 1..300 && it.cooldownSeconds in 0..86400 && it.delaySeconds in 0..300 && it.volume in 0f..1f && it.name.length in 1..100 && it.trigger in setOf("mailbox", "presence", "manual") })
@@ -118,6 +119,14 @@ fun HomeConfig.withV12Widgets(): HomeConfig {
     }
     return copy(lastPage = if (lastPage == "Interrupteurs") "Accueil" else lastPage,
         profiles = profiles.map { it.copy(landscape = upgrade(it.landscape,6),portrait = upgrade(it.portrait,4)) })
+}
+
+/** One-time migration: keep IDs, pages and cameras, make room for the full audio controls. */
+fun HomeConfig.withV13Widgets(): HomeConfig {
+    fun expand(widgets: List<HomeWidget>, columns: Int) = LayoutEngine.pack(widgets.map {
+        if (it.kind == WidgetKind.QURAN) it.copy(h = maxOf(4,it.h)) else it
+    },columns)
+    return copy(profiles = profiles.map { it.copy(landscape = expand(it.landscape,6),portrait = expand(it.portrait,4)) })
 }
 
 object LayoutEngine {

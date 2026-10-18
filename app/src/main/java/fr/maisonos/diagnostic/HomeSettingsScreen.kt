@@ -54,7 +54,7 @@ import kotlinx.coroutines.*
             Text("La disposition et la transparence se règlent depuis Accueil → Personnaliser. Les dispositions paysage et portrait sont conservées séparément.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
         }
         UpdateSettingsPanel(s, vm)
-        QuranUrlPanel(s,vm)
+        PumpkinSettingsPanel(s,vm)
         Panel("Catalogue du Coran et actualités") {
             Button(onClick = { navigate("Coran") }) { Text("Choisir un récitant et une sourate") }
             OutlinedButton(onClick = { navigate("Actualités") }) { Text("Configurer les actualités France et locales") }

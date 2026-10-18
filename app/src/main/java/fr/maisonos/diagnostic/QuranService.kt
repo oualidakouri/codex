@@ -3,6 +3,8 @@ package fr.maisonos.diagnostic
 
 import android.app.*
 import android.content.*
+import android.os.Handler
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.media3.common.*
 import androidx.media3.datasource.*
@@ -11,7 +13,7 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import fr.maisonos.core.*
 import kotlinx.coroutines.flow.MutableStateFlow
 
- data class QuranAudioState(val active: Boolean = false, val playing: Boolean = false, val buffering: Boolean = false, val title: String = "", val error: String = "")
+ data class QuranAudioState(val active: Boolean = false, val playing: Boolean = false, val buffering: Boolean = false, val title: String = "", val error: String = "", val positionMs: Long = 0, val durationMs: Long = 0, val seekable: Boolean = false, val volume: Float = 0.8f)
 object QuranPlayback {
     val state = MutableStateFlow(QuranAudioState())
     fun play(context: Context, settings: QuranSettings) {
@@ -25,6 +27,11 @@ object QuranPlayback {
         context.stopService(Intent(context,QuranService::class.java))
         state.value = QuranAudioState()
     }
+    fun seek(context: Context, positionMs: Long) {
+        if (state.value.active && state.value.seekable) runCatching {
+            context.startService(Intent(context,QuranService::class.java).setAction("SEEK").putExtra("position",positionMs))
+        }
+    }
     fun volume(context: Context, value: Float) {
         if (state.value.active) runCatching { context.startService(Intent(context,QuranService::class.java).setAction("VOLUME").putExtra("volume",value.coerceIn(0f,1f))) }
     }
@@ -33,9 +40,24 @@ object QuranPlayback {
 /** Playback starts only after a user's Play action; never at boot or after process death. */
 class QuranService : Service() {
     private var player: ExoPlayer? = null
+    private val handler = Handler(Looper.getMainLooper())
+    private val ticker = object : Runnable {
+        override fun run() {
+            player?.let { p -> QuranPlayback.state.value = QuranPlayback.state.value.copy(
+                positionMs = p.currentPosition.coerceAtLeast(0), durationMs = p.duration.takeIf { it > 0 } ?: 0,
+                seekable = p.isCurrentMediaItemSeekable && p.duration > 0, volume = p.volume) }
+            handler.postDelayed(this,500)
+        }
+    }
+    override fun onCreate() { super.onCreate(); handler.post(ticker) }
     override fun onBind(intent: Intent?) = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") { stopSelf(); return START_NOT_STICKY }
+        if (intent?.action == "SEEK") {
+            player?.let { if (it.isCurrentMediaItemSeekable && it.duration > 0) it.seekTo(intent.getLongExtra("position",0).coerceIn(0,it.duration)) }
+            if (player == null) stopSelf()
+            return START_NOT_STICKY
+        }
         if (intent?.action == "VOLUME") { player?.volume = intent.getFloatExtra("volume",0.8f).coerceIn(0f,1f); if (player == null) stopSelf(); return START_NOT_STICKY }
         try {
             getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel("quran","Lecteur de Coran",NotificationManager.IMPORTANCE_LOW))
@@ -48,7 +70,7 @@ class QuranService : Service() {
             val settings = ConfigStore(this).load().home.quran
             val url = settings.playbackUrl()
             player?.release()
-            QuranPlayback.state.value = QuranAudioState(active = true,buffering = true,title = settings.title)
+            QuranPlayback.state.value = QuranAudioState(active = true,buffering = true,title = settings.title,volume = settings.volume)
             val http = DefaultHttpDataSource.Factory().setUserAgent("MaisonOS-Quran").setConnectTimeoutMs(10000).setReadTimeoutMs(15000).setAllowCrossProtocolRedirects(false)
             val factory = DefaultMediaSourceFactory(DefaultDataSource.Factory(this,http))
             player = ExoPlayer.Builder(this).setMediaSourceFactory(factory).build().apply {
@@ -76,6 +98,7 @@ class QuranService : Service() {
         return START_NOT_STICKY
     }
     override fun onDestroy() {
+        handler.removeCallbacks(ticker)
         player?.release(); player = null
         QuranPlayback.state.value = QuranAudioState(error = QuranPlayback.state.value.error)
         stopForeground(STOP_FOREGROUND_REMOVE); super.onDestroy()

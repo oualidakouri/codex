@@ -1,6 +1,6 @@
-# Architecture Maison OS 1.2
+# Architecture Maison OS 1.3
 
-Deux modules Kotlin, sans backend : `core` (domaine JVM testable) et `app` (Android/Compose). Application ID historique `fr.maisonos.diagnostic` conservé pour mettre à jour le diagnostic sans perte de configuration. Version 1.2.0 / code 12, min API 26, cible API 36.
+Deux modules Kotlin, sans backend : `core` (domaine JVM testable) et `app` (Android/Compose). Application ID historique `fr.maisonos.diagnostic` conservé pour mettre à jour le diagnostic sans perte de configuration. Version 1.3.0 / code 13, min API 26, cible API 36.
 
 ## Domaine
 
@@ -55,3 +55,13 @@ Schéma 4 : les versions 1 à 3 sont migrées, les widgets SWITCHES sont retiré
 `QuranCatalogController` initialise un catalogue de sept récitations complètes et 114 noms de sourates depuis les métadonnées versionnées de risan/quran-json (MP3Quran/Tanzil, sources et empreintes dans third_party). L’API MP3Quran actualise le catalogue ; les audios restent en réseau. `QuranService` est un foreground service mediaPlayback Media3 : HTTP(S), MP3/AAC/HLS, piste vidéo désactivée, audio focus, volume, notification d’arrêt, START_NOT_STICKY. Aucune reprise au boot. L’adhan arrête explicitement la récitation. Les URL personnelles sont chiffrées et exclues des exports.
 
 `NewsParser` lit RSS 2/Atom avec le parseur XML sécurisé existant, garde des titres/source/date/lien, refuse les URL non HTTPS des articles, et borne la taille et le nombre d’éléments. `NewsController` actualise au plus toutes les quinze minutes au premier plan, conserve un cache privé par URL et isole les échecs France/local. La recherche locale est une recherche Google Actualités sur un nom de ville, pas une géolocalisation de chaque article. Les URL RSS personnelles sont exclues des exports.
+
+## Extensions 1.3
+
+Schéma 5 : migration des versions 1 à 4, ajout des préférences citrouille avec désactivation par défaut, agrandissement unique des cartes Coran à quatre lignes minimum, puis placement sans chevauchement. Les identifiants, pages, équipements et secrets existants sont conservés.
+
+`QuranCatalog.step` navigue dans les récitations annoncées, garde la sourate lors d’un changement de récitant si elle est disponible et boucle aux extrémités. `ProbeViewModel` sérialise la sauvegarde avant de relancer une lecture active. `QuranService` publie position/durée/déplaçabilité/volume toutes les 500 ms et applique SEEK seulement si Media3 l’autorise. Le volume applicatif est borné, sans changer le volume système. Arrêt du callback à la destruction du service ; priorité adhan conservée.
+
+`PumpkinRenderer` utilise des maillages 3D statiques (citrouille lobée, tige, yeux sphériques), éclairage et pupilles en OpenGL ES 2, sans lancer de rayons par pixel. Surface RGBA transparente au-dessus de l’application, résolution de rendu plafonnée à 640 pixels sur le grand côté et vingt images/s maximum. Le rendu n’existe que pendant l’overlay. `FaceTracker` utilise le détecteur frontal embarqué Android, une image Y convertie en RGB565 de 320 pixels maximum, orientée avec CameraX et détruite immédiatement. Au plus quatre analyses/s ; aucune identité, image enregistrée ou dépendance réseau. Le plus grand visage détecté guide le regard, X est inversé une seule fois pour le miroir frontal, puis interpolation du rendu. Le regard revient au centre après perte de détection.
+
+Un seul pipeline CameraX est lié à la fois : mouvement pour la veille ou visage pour la citrouille. Sans aperçu affiché, seule l’analyse est liée ; aucun Preview caché ne retarde la capture. L’overlay exige la permission caméra au premier plan, sauf démonstration explicitement simulée. Un délai de quinze secondes signale une caméra qui ne s’ouvre pas. Délai et durée bornés, Retour/toucher pour fermer, arrêt au passage en arrière-plan, pendant l’adhan, avant un événement et en protection des ressources. Le mode automatique est volontaire et remplace la veille sombre tant qu’il est activé ; le mouvement ne réinitialise pas son délai, les interactions tactiles le font. Aucun overlay système, permission de superposition ou contournement de Doze.

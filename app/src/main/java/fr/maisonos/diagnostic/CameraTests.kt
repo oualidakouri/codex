@@ -81,14 +81,16 @@ fun RtspVideo(config: CameraConfig, vm: ProbeViewModel, modifier: Modifier = Mod
 }
 
 @Composable
-fun PresenceCamera(vm: ProbeViewModel, showPreview: Boolean) {
+fun PresenceCamera(vm: ProbeViewModel, showPreview: Boolean, trackFace: Boolean = false) {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current
     val previewView = remember { PreviewView(context) }
-    DisposableEffect(lifecycle) {
+    DisposableEffect(lifecycle, trackFace) {
         val disposed = AtomicBoolean(false)
         val executor = Executors.newSingleThreadExecutor()
         val detector = MotionDetector()
+        val faces = FaceTracker()
+        var faceFailures = 0
         val last = AtomicLong(0)
         var provider: ProcessCameraProvider? = null
         @Suppress("DEPRECATION")
@@ -105,8 +107,9 @@ fun PresenceCamera(vm: ProbeViewModel, showPreview: Boolean) {
                     analysis.setAnalyzer(executor) { image ->
                         try {
                             val now = SystemClock.elapsedRealtime()
-                            if (now - last.get() >= 125) {
+                            if (now - last.get() >= if (trackFace) 250 else 125) {
                                 last.set(now)
+                                if (trackFace) { val gaze = faces.detect(image); faceFailures = 0; vm.face(gaze); return@setAnalyzer }
                                 val plane = image.planes[0]
                                 val buffer = plane.buffer
                                 val crop = image.cropRect
@@ -117,14 +120,15 @@ fun PresenceCamera(vm: ProbeViewModel, showPreview: Boolean) {
                                 }
                                 vm.motion(detector.score(samples))
                             }
-                        } catch (_: Exception) { /* Image always closes; transient frame failures don't retain data. */ }
+                        } catch (_: Exception) { if (trackFace && ++faceFailures >= 3) vm.pumpkinCameraFailed() }
                         finally { image.close() }
                     }
-                    p.bindToLifecycle(lifecycle, CameraSelector.DEFAULT_FRONT_CAMERA, analysis, preview)
-                    vm.record("Présence", Evidence.RUNNING, "Analyse locale de mouvement (8 échantillons/s maximum), pas de reconnaissance de personne. Aucun enregistrement.")
+                    if (showPreview) p.bindToLifecycle(lifecycle, CameraSelector.DEFAULT_FRONT_CAMERA, analysis, preview)
+                    else p.bindToLifecycle(lifecycle, CameraSelector.DEFAULT_FRONT_CAMERA, analysis)
+                    if (trackFace) vm.pumpkinCameraReady() else vm.record("Présence", Evidence.RUNNING, "Analyse locale de mouvement (8 échantillons/s maximum), pas de reconnaissance de personne. Aucun enregistrement.")
                 } catch (_: Exception) {
                     vm.record("Présence", Evidence.FAILED, "Caméra frontale indisponible, permission refusée ou caméra déjà utilisée.")
-                    vm.enablePresence(false)
+                    if (trackFace) vm.pumpkinCameraFailed() else vm.enablePresence(false)
                 }
             }
         }, ContextCompat.getMainExecutor(context))

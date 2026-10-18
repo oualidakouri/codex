@@ -8,6 +8,7 @@ import fr.maisonos.core.CameraConfig
 import fr.maisonos.core.HomeConfig
 import fr.maisonos.core.withCameraTiles
 import fr.maisonos.core.withV12Widgets
+import fr.maisonos.core.withV13Widgets
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -20,7 +21,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 @Serializable
 data class ProbeConfig(
-    val version: Int = 4,
+    val version: Int = 5,
     val camera: CameraConfig = CameraConfig(),
     val idleSeconds: Int = 60,
     val motionThreshold: Float = 0.07f,
@@ -28,13 +29,13 @@ data class ProbeConfig(
     val home: HomeConfig = HomeConfig(),
 ) {
     fun validate() {
-        require(version == 4 && idleSeconds in 15..3600 && motionThreshold in 0.01f..0.5f)
+        require(version == 5 && idleSeconds in 15..3600 && motionThreshold in 0.01f..0.5f)
         if (camera.host.isNotBlank()) camera.validate()
         home.validate()
     }
     fun exportSafe() = copy(camera = camera.exportSafe(), home = home.exportSafe())
     fun migrated(): ProbeConfig {
-        require(version in 1..4)
+        require(version in 1..5)
         val cameras = if (version == 1 && home.cameras.isEmpty() && camera.host.isNotBlank()) listOf(camera) else home.cameras
         val profiles = if (version == 1 && cameras.isNotEmpty()) home.profiles.map { profile ->
             val widgets = cameras.map { c -> fr.maisonos.core.HomeWidget(kind = fr.maisonos.core.WidgetKind.CAMERA, y = 6, cameraId = c.id) }
@@ -42,7 +43,8 @@ data class ProbeConfig(
         } else home.profiles
         val migrated = home.copy(cameras = cameras, profiles = profiles)
         val v3 = if (version < 3 || migrated.dashboardRevision == 0) migrated.withCameraTiles() else migrated
-        return copy(version = 4, home = if (version < 4) v3.withV12Widgets() else v3)
+        val v4 = if (version < 4) v3.withV12Widgets() else v3
+        return copy(version = 5, home = if (version < 5) v4.withV13Widgets() else v4)
     }
 }
 

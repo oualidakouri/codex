@@ -41,7 +41,7 @@ class ProbeInstrumentedTest {
         compose.onNodeWithTag("nav-Accueil").performClick()
     }
     @After fun restore() {
-        QuranPlayback.stop(context); AdhanPlayback.stop(context); AdhanScheduler.cancel(context)
+        QuranPlayback.stop(context); AdhanPlayback.stop(context); AdhanPlayback.active.value = false; AdhanScheduler.cancel(context)
         if (::previous.isInitialized) ConfigStore(context).save(previous)
     }
     @Test fun simulationAndNavigationAreExplicit() {
@@ -86,7 +86,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(4, migrated.version); assertEquals(300,migrated.idleSeconds)
+        assertEquals(5, migrated.version); assertEquals(300,migrated.idleSeconds)
         assertEquals("old-secret", migrated.home.cameras.single().password)
         assertTrue(migrated.home.profile().landscape.any { it.kind == WidgetKind.CAMERA })
     }
@@ -163,23 +163,32 @@ class ProbeInstrumentedTest {
         assertTrue(catalog.recitations.any { it.name == "Mishary Alafasi" })
         assertEquals("الفاتحة",catalog.surahs.first().name)
     }
-    @Test fun networkQuranPlaybackReallyStartsAndStopsForegroundService() {
-        val samples = 160000
+    @Test fun networkQuranPlaybackSupportsSeekVolumeAndStop() {
+        val samples = 960000
         val wav = ByteBuffer.allocate(44 + samples * 2).order(ByteOrder.LITTLE_ENDIAN)
         wav.put("RIFF".toByteArray());wav.putInt(36 + samples*2);wav.put("WAVEfmt ".toByteArray());wav.putInt(16);wav.putShort(1);wav.putShort(1);wav.putInt(8000);wav.putInt(16000);wav.putShort(2);wav.putShort(16);wav.put("data".toByteArray());wav.putInt(samples*2)
         repeat(samples) { i -> wav.putShort((kotlin.math.sin(i * 2 * Math.PI * 440 / 8000) * 500).toInt().toShort()) }
         val server = java.net.ServerSocket(0,2,java.net.InetAddress.getByName("127.0.0.1"))
         val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
-        val future = executor.submit {
-            server.accept().use { socket ->
-                socket.soTimeout = 10000
-                val input = socket.getInputStream().bufferedReader()
-                while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break }
-                socket.getOutputStream().use { output ->
-                    output.write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: ${wav.array().size}\r\nConnection: close\r\n\r\n".toByteArray())
-                    output.write(wav.array());output.flush()
+        executor.submit {
+            while (!server.isClosed) try {
+                server.accept().use { socket ->
+                    socket.soTimeout = 10000
+                    val input = socket.getInputStream().bufferedReader()
+                    var offset = 0
+                    while (true) {
+                        val line = input.readLine() ?: break
+                        if (line.isEmpty()) break
+                        if (line.startsWith("Range: bytes=",true)) offset = line.substringAfter('=').substringBefore('-').toInt().coerceIn(0,wav.array().size-1)
+                    }
+                    socket.getOutputStream().use { output ->
+                        val status = if (offset > 0) "206 Partial Content" else "200 OK"
+                        val range = if (offset > 0) "Content-Range: bytes $offset-${wav.array().size-1}/${wav.array().size}\r\n" else ""
+                        output.write("HTTP/1.1 $status\r\nContent-Type: audio/wav\r\nAccept-Ranges: bytes\r\n${range}Content-Length: ${wav.array().size-offset}\r\nConnection: close\r\n\r\n".toByteArray())
+                        output.write(wav.array(),offset,wav.array().size-offset);output.flush()
+                    }
                 }
-            }
+            } catch (_: java.io.IOException) { if (server.isClosed) break }
         }
         try {
             val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
@@ -190,10 +199,101 @@ class ProbeInstrumentedTest {
             compose.onNodeWithTag("quran-play").performScrollTo().performClick()
             compose.waitUntil(30000) { QuranPlayback.state.value.playing }
             assertTrue(QuranPlayback.state.value.active)
-            compose.onNodeWithTag("quran-stop").performClick()
+            compose.waitUntil(15000) { QuranPlayback.state.value.seekable && QuranPlayback.state.value.durationMs > 100000 }
+            compose.onNodeWithTag("quran-timeline").performScrollTo().performSemanticsAction(SemanticsActions.SetProgress) { it(45000f) }
+            compose.waitUntil(15000) { QuranPlayback.state.value.positionMs >= 44000 }
+            compose.onNodeWithTag("quran-volume-down").performScrollTo().performClick()
+            compose.waitUntil(15000) { QuranPlayback.state.value.volume < 0.75f }
+            compose.onNodeWithTag("quran-stop").performScrollTo().performClick()
             compose.waitUntil(10000) { !QuranPlayback.state.value.active }
-            future.get(10,java.util.concurrent.TimeUnit.SECONDS)
         } finally { QuranPlayback.stop(context);server.close();executor.shutdownNow() }
+    }
+    @Test fun dashboardAudioButtonsChangePersistedSurahReciterAndVolume() {
+        val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
+        val catalog = vm.quranCatalog.state.value.catalog
+        val first = catalog.recitations.first()
+        val q = QuranSettings(custom = false,reciterId = first.reciterId,moshafId = first.moshafId,reciter = first.name,server = first.server,surah = 1)
+        compose.runOnUiThread { vm.updateHome { it.copy(quran = q,profiles = listOf(LayoutProfile(landscape = listOf(HomeWidget(kind = WidgetKind.QURAN,w = 6,h = 5))))) } }
+        compose.waitUntil(15000) { vm.state.value.config.home.quran == q }
+        compose.onNodeWithTag("quran-volume-down").performScrollTo().performClick()
+        compose.waitUntil(15000) { vm.state.value.config.home.quran.volume < 0.75f }
+        compose.onNodeWithTag("quran-volume-up").performScrollTo().performClick()
+        compose.waitUntil(15000) { vm.state.value.config.home.quran.volume > 0.75f }
+        compose.onNodeWithTag("quran-surah-next").performScrollTo().performClick()
+        compose.waitUntil(15000) { vm.state.value.config.home.quran.surah == 2 }
+        compose.onNodeWithTag("quran-surah-prev").performScrollTo().performClick()
+        compose.waitUntil(15000) { vm.state.value.config.home.quran.surah == 1 }
+        compose.onNodeWithTag("quran-reciter-next").performScrollTo().performClick()
+        compose.waitUntil(15000) { vm.state.value.config.home.quran.reciterId != first.reciterId }
+        compose.onNodeWithTag("quran-reciter-prev").performScrollTo().performClick()
+        compose.waitUntil(15000) { ConfigStore(context).load().home.quran.reciterId == first.reciterId }
+        compose.onNodeWithTag("quran-timeline").assertIsNotEnabled()
+    }
+    @Test fun pumpkinDemoClosesAndCannotSurviveBackgroundOrInterruptAdhan() {
+        val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
+        compose.onNodeWithTag("nav-Paramètres").performClick()
+        compose.onNodeWithTag("pumpkin-demo").performScrollTo().performClick()
+        compose.onNodeWithText("SIMULATION · regard animé sans caméra").assertExists()
+        assertTrue(vm.state.value.pumpkinActive)
+        compose.onNodeWithTag("pumpkin-close").performClick()
+        compose.onNodeWithTag("pumpkin-overlay").assertDoesNotExist()
+        compose.runOnUiThread { vm.startPumpkin(true); vm.foreground(false) }
+        compose.waitUntil(10000) { !vm.state.value.pumpkinActive }
+        compose.runOnUiThread { vm.foreground(true); AdhanPlayback.active.value = true; vm.startPumpkin(true) }
+        assertFalse(vm.state.value.pumpkinActive)
+        compose.runOnUiThread { AdhanPlayback.active.value = false }
+    }
+    @Test fun automaticPumpkinOpensFrontCameraAndStopsInBackground() {
+        InstrumentationRegistry.getInstrumentation().uiAutomation.grantRuntimePermission(context.packageName,android.Manifest.permission.CAMERA)
+        val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
+        compose.runOnUiThread { vm.interact(); vm.updateHome { it.copy(pumpkin = PumpkinSettings(enabled = true,idleSeconds = 5,durationSeconds = 60)) } }
+        compose.waitUntil(20000) { vm.state.value.pumpkinActive }
+        compose.waitUntil(30000) { vm.state.value.pumpkinFaceFrames > 0 || vm.state.value.pumpkinCameraError }
+        assertFalse("Camera binding or frame analysis failed: " + vm.state.value.diagnostics["Citrouille"]?.detail,vm.state.value.pumpkinCameraError)
+        assertTrue("No front-camera frame analyzed",vm.state.value.pumpkinFaceFrames > 0)
+        assertFalse(vm.state.value.pumpkinSimulated)
+        // Virtual camera frames demonstrate the pipeline, never a real visitor's face.
+        compose.runOnUiThread { vm.foreground(false) }
+        compose.waitUntil(10000) { !vm.state.value.pumpkinActive && !vm.state.value.cameraEnabled }
+        compose.runOnUiThread { vm.foreground(true); vm.updateHome { it.copy(pumpkin = PumpkinSettings()) } }
+    }
+    @Test fun pumpkinShaderDrawsTransparent3dGeometryAndMovesPupils() {
+        val display = android.opengl.EGL14.eglGetDisplay(android.opengl.EGL14.EGL_DEFAULT_DISPLAY)
+        val version = IntArray(2)
+        assertTrue(android.opengl.EGL14.eglInitialize(display,version,0,version,1))
+        val configs = arrayOfNulls<android.opengl.EGLConfig>(1);val count = IntArray(1)
+        val attributes = intArrayOf(android.opengl.EGL14.EGL_RENDERABLE_TYPE,4,android.opengl.EGL14.EGL_SURFACE_TYPE,1,
+            android.opengl.EGL14.EGL_RED_SIZE,8,android.opengl.EGL14.EGL_GREEN_SIZE,8,android.opengl.EGL14.EGL_BLUE_SIZE,8,android.opengl.EGL14.EGL_ALPHA_SIZE,8,android.opengl.EGL14.EGL_DEPTH_SIZE,16,android.opengl.EGL14.EGL_NONE)
+        assertTrue(android.opengl.EGL14.eglChooseConfig(display,attributes,0,configs,0,1,count,0))
+        val eglContext = android.opengl.EGL14.eglCreateContext(display,configs[0],android.opengl.EGL14.EGL_NO_CONTEXT,intArrayOf(android.opengl.EGL14.EGL_CONTEXT_CLIENT_VERSION,2,android.opengl.EGL14.EGL_NONE),0)
+        val surface = android.opengl.EGL14.eglCreatePbufferSurface(display,configs[0],intArrayOf(android.opengl.EGL14.EGL_WIDTH,320,android.opengl.EGL14.EGL_HEIGHT,200,android.opengl.EGL14.EGL_NONE),0)
+        try {
+            assertTrue(android.opengl.EGL14.eglMakeCurrent(display,surface,surface,eglContext))
+            val renderer = PumpkinRenderer();renderer.onSurfaceCreated(null,null);renderer.onSurfaceChanged(null,320,200)
+            fun snapshot(): ByteArray {
+                renderer.onDrawFrame(null)
+                val pixels = ByteBuffer.allocateDirect(320*200*4)
+                android.opengl.GLES20.glReadPixels(0,0,320,200,android.opengl.GLES20.GL_RGBA,android.opengl.GLES20.GL_UNSIGNED_BYTE,pixels)
+                return ByteArray(pixels.capacity()).also { pixels.get(it) }
+            }
+            val center = snapshot();assertNull(renderer.error);assertEquals(0,center[3].toInt())
+            assertTrue(center.indices.count { it % 4 == 3 && center[it].toInt() != 0 } > 5000)
+            renderer.targetX = 1f;renderer.targetY = 0.5f
+            repeat(12) { renderer.onDrawFrame(null) }
+            val moved = snapshot()
+            val colors = IntArray(320*200) { i ->
+                val j = ((199-i/320)*320+i%320)*4
+                ((center[j+3].toInt() and 255) shl 24) or ((center[j].toInt() and 255) shl 16) or ((center[j+1].toInt() and 255) shl 8) or (center[j+2].toInt() and 255)
+            }
+            android.graphics.Bitmap.createBitmap(colors,320,200,android.graphics.Bitmap.Config.ARGB_8888).let { bitmap ->
+                File(context.cacheDir,"pumpkin-render.png").outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,it) };bitmap.recycle()
+            }
+            assertTrue(center.indices.count { center[it] != moved[it] } > 100)
+            assertTrue(renderer.frames >= 14)
+        } finally {
+            android.opengl.EGL14.eglMakeCurrent(display,android.opengl.EGL14.EGL_NO_SURFACE,android.opengl.EGL14.EGL_NO_SURFACE,android.opengl.EGL14.EGL_NO_CONTEXT)
+            android.opengl.EGL14.eglDestroySurface(display,surface);android.opengl.EGL14.eglDestroyContext(display,eglContext);android.opengl.EGL14.eglReleaseThread()
+        }
     }
     @Test fun v11MigrationRemovesSwitchWidgetsAndKeepsExistingLayoutIds() {
         val text = """{"version":3,"home":{"lastPage":"Interrupteurs","news":{"enabled":false},"profiles":[{"id":"existing","name":"Mon profil","landscape":[{"id":"clock-id","kind":"CLOCK","x":0,"y":0,"w":3,"h":2},{"id":"old-switch","kind":"SWITCHES","x":3,"y":0,"w":3,"h":2}],"portrait":[{"id":"clock-id","kind":"CLOCK","x":0,"y":0,"w":3,"h":2},{"id":"old-switch","kind":"SWITCHES","x":0,"y":2,"w":3,"h":2}]}]}}"""
@@ -201,7 +301,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(4,migrated.version);assertEquals("Accueil",migrated.home.lastPage)
+        assertEquals(5,migrated.version);assertEquals("Accueil",migrated.home.lastPage)
         val widgets = migrated.home.profile().landscape
         assertTrue(widgets.any { it.id == "clock-id" && it.kind == WidgetKind.CLOCK })
         assertTrue(widgets.none { it.kind == WidgetKind.SWITCHES })
@@ -221,7 +321,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(4,migrated.version); assertEquals("first-secret",migrated.camera.password)
+        assertEquals(5,migrated.version); assertEquals("first-secret",migrated.camera.password)
         assertEquals(listOf("first-secret","second-secret"),migrated.home.cameras.map { it.password })
         assertEquals(2,migrated.home.maxStreams); assertEquals("Caméras",migrated.home.lastPage)
         for (tiles in listOf(migrated.home.profile().landscape,migrated.home.profile().portrait)) {

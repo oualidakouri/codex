@@ -17,7 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.*
 import fr.maisonos.core.*
 
-@Composable internal fun QuranControls(settings: QuranSettings, compact: Boolean = false, configure: () -> Unit = {}) {
+@Composable internal fun QuranControls(settings: QuranSettings, compact: Boolean = false, configure: () -> Unit = {}, vm: ProbeViewModel? = null) {
     val context = LocalContext.current
     val audio by QuranPlayback.state.collectAsState()
     val adhan by AdhanPlayback.active.collectAsState()
@@ -33,6 +33,31 @@ import fr.maisonos.core.*
         OutlinedButton(enabled = audio.active || audio.buffering, onClick = { QuranPlayback.stop(context) }, modifier = Modifier.testTag("quran-stop")) { Text("■ Arrêter") }
         if (compact) TextButton(onClick = configure) { Text("Choisir") }
     }
+    if (vm != null) {
+        val catalog by vm.quranCatalog.state.collectAsState()
+        val canStep = catalog.catalog.recitations.isNotEmpty() && !adhan
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedButton(enabled = canStep, onClick = { vm.stepQuran(-1) }, modifier = Modifier.testTag("quran-surah-prev")) { Text("◀ Sourate") }
+            OutlinedButton(enabled = canStep, onClick = { vm.stepQuran(1) }, modifier = Modifier.testTag("quran-surah-next")) { Text("Sourate ▶") }
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            OutlinedButton(enabled = canStep, onClick = { vm.stepQuran(-1,true) }, modifier = Modifier.testTag("quran-reciter-prev")) { Text("▲ Récitant") }
+            OutlinedButton(enabled = canStep, onClick = { vm.stepQuran(1,true) }, modifier = Modifier.testTag("quran-reciter-next")) { Text("▼ Récitant") }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(enabled = settings.volume > 0f, onClick = { vm.adjustQuranVolume(-0.1f) }, modifier = Modifier.testTag("quran-volume-down")) { Text("Son −") }
+            Text(" ${(settings.volume*100).toInt()} % ",fontSize = 12.sp)
+            OutlinedButton(enabled = settings.volume < 1f, onClick = { vm.adjustQuranVolume(0.1f) }, modifier = Modifier.testTag("quran-volume-up")) { Text("Son +") }
+        }
+    }
+    var seeking by remember { mutableStateOf<Float?>(null) }
+    val duration = audio.durationMs
+    Text("${audioTime(seeking?.toLong() ?: audio.positionMs)} / ${if (duration > 0) audioTime(duration) else "—"}",fontSize = 12.sp)
+    Slider(value = seeking ?: audio.positionMs.toFloat().coerceIn(0f,maxOf(1,duration).toFloat()),
+        onValueChange = { seeking = it }, onValueChangeFinished = { seeking?.let { QuranPlayback.seek(context,it.toLong()) }; seeking = null },
+        valueRange = 0f..maxOf(1,duration).toFloat(),enabled = audio.active && audio.seekable && duration > 0,
+        modifier = Modifier.fillMaxWidth().testTag("quran-timeline"))
+    if (audio.active && !audio.seekable && !audio.buffering) Text("Avance indisponible pour ce flux en direct.",fontSize = 11.sp)
     if (audio.error.isNotBlank()) Text(audio.error,fontSize = 11.sp,color = MaterialTheme.colorScheme.error)
     if (adhan) Text("Adhan prioritaire",fontSize = 11.sp,color = MaterialTheme.colorScheme.secondary)
 }
@@ -46,7 +71,7 @@ import fr.maisonos.core.*
         Field("URL réseau du Coran",url,{ url = it.take(2048); invalid = false })
         Button(onClick = { try { requireAudioUrl(url.trim()); vm.updateHome { it.copy(quran = it.quran.copy(custom = true,url = url.trim())) }; invalid = false } catch (_: Exception) { invalid = true } },modifier = Modifier.testTag("save-quran-url")) { Text("Enregistrer mon flux") }
         if (invalid) Text("URL audio HTTP(S) valide requise, sans identifiants intégrés.",color = MaterialTheme.colorScheme.error)
-        QuranControls(q)
+        QuranControls(q,vm = vm)
     }
 }
 
@@ -58,7 +83,10 @@ import fr.maisonos.core.*
     var volume by remember(q.volume) { mutableFloatStateOf(q.volume) }
     val context = LocalContext.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()),verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        QuranUrlPanel(s,vm)
+        Panel("Lecteur de Coran") { QuranControls(q,vm = vm) }
+        var personal by remember { mutableStateOf(false) }
+        TextButton(onClick = { personal = !personal }) { Text("Flux personnel · facultatif") }
+        if (personal) QuranUrlPanel(s,vm)
         Panel("Récitants et sourates · MP3Quran") {
             Text("Sept récitants connus et les noms des 114 sourates sont disponibles dès le départ. Actualiser charge le catalogue MP3Quran ; l’audio reste diffusé par ses serveurs et nécessite le réseau. Choisir un récitant puis une sourate.",fontSize = 12.sp)
             Button(enabled = !catalog.busy,onClick = vm.quranCatalog::refresh) { Text(if (catalog.busy) "Chargement du catalogue…" else "Charger / actualiser les récitants") }
@@ -93,3 +121,5 @@ import fr.maisonos.core.*
         } }
     },confirmButton = { TextButton(onClick = { selectingSurah = false }) { Text("Fermer") } })
 }
+
+internal fun audioTime(ms: Long): String = "%d:%02d".format(java.util.Locale.ROOT,ms.coerceAtLeast(0)/60000,ms.coerceAtLeast(0)/1000%60)

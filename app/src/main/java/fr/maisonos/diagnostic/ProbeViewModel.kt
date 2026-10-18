@@ -21,6 +21,12 @@ data class ProbeState(
     val busy: Boolean = false,
     val simulation: Boolean = false,
     val sleeping: Boolean = false,
+    val pumpkinActive: Boolean = false,
+    val pumpkinSimulated: Boolean = false,
+    val pumpkinCameraReady: Boolean = false,
+    val pumpkinCameraError: Boolean = false,
+    val pumpkinFaceFrames: Long = 0,
+    val gaze: FaceGaze = FaceGaze(),
     val cameraEnabled: Boolean = false,
     val video: Boolean = false,
     val foreground: Boolean = true,
@@ -61,11 +67,14 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
     private val configMutex = Mutex()
     private val ruleEngine = RuleEngine()
     private var eventJob: Job? = null
+    private var pumpkinJob: Job? = null
+    private var lastFaceAt = 0L
     private var lastInteraction = SystemClock.elapsedRealtime()
     private val started = SystemClock.elapsedRealtime()
     init {
         viewModelScope.launch {
             simulation.events.collect { event ->
+                dismissPumpkin()
                 record("Capteurs", Evidence.SIMULATED, "Événement local ${event.type} : boîte aux lettres. Aucun capteur réel connecté.")
                 val rule = ruleEngine.match(_state.value.config.home.rules, "mailbox", SystemClock.elapsedRealtime()).firstOrNull()
                 if (rule != null) playRule(rule, true)
@@ -89,11 +98,17 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
                 val r = withContext(Dispatchers.IO) { DeviceDiagnostics.sample(app, started) }
                 val wifi = DeviceDiagnostics.wifi(app)
                 _state.update { s -> s.copy(resources = r, samples = (s.samples + r).takeLast(120), wifi = wifi?.let { "${it.address}/${it.prefix} · Wi-Fi présent (Internet indépendant)" } ?: "Wi-Fi indisponible") }
+                if (r.protect && _state.value.pumpkinActive) dismissPumpkin()
                 if (r.protect && (_state.value.video || _state.value.cameraEnabled)) {
                     stopVideo(); enablePresence(false); stopPtz()
                     record("Performance", Evidence.OBSERVED, "Protection active : vidéo et analyse caméra arrêtées (température système ou batterie faible).")
                 }
-                if (!_state.value.sleeping && _state.value.foreground && SystemClock.elapsedRealtime() - lastInteraction > _state.value.config.idleSeconds * 1000L) sleep()
+                val current = _state.value
+                val idle = SystemClock.elapsedRealtime() - lastInteraction
+                val pumpkin = current.config.home.pumpkin
+                val pumpkinWaiting = pumpkin.enabled && current.foreground && !current.simulation && !current.animation && !AdhanPlayback.active.value && current.resources?.protect != true
+                if (PumpkinSchedule.due(pumpkin,idle,current.foreground,!pumpkinWaiting || current.pumpkinActive || current.busy)) startPumpkin()
+                if (!current.sleeping && current.foreground && !current.pumpkinActive && !pumpkinWaiting && idle > current.config.idleSeconds * 1000L) sleep()
                 if (_state.value.foreground && !_state.value.sleeping) {
                     val home = _state.value.config.home
                     weather.refresh(home.weather); news.refresh(home.news, home.weather.city.ifBlank { home.prayer.city })
@@ -157,6 +172,23 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         try { persist { old -> old.copy(home = transform(old.home)) } }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { log("Réglage refusé : données invalides ou stockage indisponible.") }
+    } }
+    fun stepQuran(direction: Int, reciter: Boolean = false) { viewModelScope.launch {
+        try {
+            persist { old -> old.copy(home = old.home.copy(quran = quranCatalog.state.value.catalog.step(old.home.quran,direction,reciter))) }
+            val audio = QuranPlayback.state.value
+            if (audio.active && !AdhanPlayback.active.value) QuranPlayback.play(getApplication(),_state.value.config.home.quran)
+            interact()
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { log("Changement de récitation impossible : catalogue ou stockage indisponible.") }
+    } }
+    fun adjustQuranVolume(delta: Float) { viewModelScope.launch {
+        try {
+            persist { old -> old.copy(home = old.home.copy(quran = old.home.quran.copy(volume = (old.home.quran.volume + delta).coerceIn(0f,1f)))) }
+            QuranPlayback.volume(getApplication(),_state.value.config.home.quran.volume)
+            interact()
+        } catch (e: CancellationException) { throw e }
+        catch (_: Exception) { log("Volume non enregistré.") }
     } }
     fun selectCamera(camera: CameraConfig) { _state.update { it.copy(cameraPorts = emptyList()) }; save(_state.value.config.copy(camera = camera)) }
     fun newCamera() { _state.update { it.copy(cameraPorts = emptyList()) }; save(_state.value.config.copy(camera = CameraConfig())) }
@@ -262,7 +294,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
     }
     fun stopVideo() { _state.update { it.copy(video = false) } }
     fun setSimulation(value: Boolean) {
-        stopVideo(); enablePresence(false)
+        dismissPumpkin(); stopVideo(); enablePresence(false)
         viewModelScope.launch { disconnect() }
         _state.update { it.copy(simulation = value) }
         log(if (value) "SIMULATION : les tests réseau sont désactivés." else "Mode matériel : chaque test attend une observation réelle.")
@@ -277,6 +309,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         eventJob = viewModelScope.launch {
             delay(rule.delaySeconds * 1000L)
             if (!_state.value.foreground) return@launch
+            dismissPumpkin()
             wake("événement local")
             _state.update { it.copy(animation = true, eventRule = rule, eventSimulated = simulated) }
             record("Animations", if (simulated) Evidence.SIMULATED else Evidence.OBSERVED, if (simulated) "Test manuel d’une règle locale ; aucun capteur réel supposé." else "Règle déclenchée par un mouvement de la caméra frontale.")
@@ -284,7 +317,54 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(animation = false, eventRule = null) }
         }
     }
+    fun startPumpkin(simulated: Boolean = false) {
+        val s = _state.value
+        if (!s.foreground || s.resources?.protect == true || s.animation || AdhanPlayback.active.value) return
+        if (!simulated && (s.simulation || androidx.core.content.ContextCompat.checkSelfPermission(getApplication(),android.Manifest.permission.CAMERA) != android.content.pm.PackageManager.PERMISSION_GRANTED)) {
+            record("Citrouille",Evidence.NOT_TESTED,"Autoriser la caméra dans Paramètres → Citrouille, ou utiliser la démonstration sans caméra.")
+            // Prevent an enabled timer from looping on a denied permission.
+            updateHome { it.copy(pumpkin = it.pumpkin.copy(enabled = false)) }
+            return
+        }
+        stopVideo(); stopPtz(); pumpkinJob?.cancel(); lastFaceAt = 0
+        _state.update { it.copy(pumpkinActive = true,pumpkinSimulated = simulated,pumpkinCameraReady = false,pumpkinCameraError = false,pumpkinFaceFrames = 0,gaze = FaceGaze(),sleeping = false) }
+        record("Citrouille",if (simulated) Evidence.SIMULATED else Evidence.RUNNING,
+            if (simulated) "Démonstration du regard ; aucun humain détecté." else "Suivi frontal local demandé ; résultat matériel non vérifié.")
+        pumpkinJob = viewModelScope.launch {
+            val until = SystemClock.elapsedRealtime() + s.config.home.pumpkin.durationSeconds*1000L
+            val cameraDeadline = SystemClock.elapsedRealtime() + 15000
+            while (isActive && SystemClock.elapsedRealtime() < until) {
+                delay(250)
+                if (!simulated && !_state.value.pumpkinCameraReady && !_state.value.pumpkinCameraError && SystemClock.elapsedRealtime() > cameraDeadline) pumpkinCameraFailed()
+                if (!simulated && _state.value.gaze.detected && SystemClock.elapsedRealtime()-lastFaceAt > 1500) _state.update { it.copy(gaze = FaceGaze()) }
+            }
+            dismissPumpkin()
+        }
+    }
+    fun dismissPumpkin() {
+        pumpkinJob?.cancel(); pumpkinJob = null
+        _state.update { it.copy(pumpkinActive = false,gaze = FaceGaze(),pumpkinCameraReady = false) }; interact()
+    }
+    fun pumpkinCameraReady() {
+        _state.update { it.copy(pumpkinCameraReady = true) }
+        record("Citrouille",Evidence.RUNNING,"Caméra frontale liée. Détection de visage localement ; aucun suivi humain validé avant observation.")
+    }
+    fun pumpkinCameraFailed() {
+        _state.update { it.copy(pumpkinCameraReady = false,pumpkinCameraError = true,gaze = FaceGaze()) }
+        record("Citrouille",Evidence.FAILED,"Caméra indisponible ou permission refusée. Regard au centre ; toucher Fermer pour sortir.")
+    }
+    fun face(gaze: FaceGaze) {
+        if (!_state.value.pumpkinActive || _state.value.pumpkinSimulated) return
+        _state.update { it.copy(pumpkinFaceFrames = it.pumpkinFaceFrames + 1) }
+        val now = SystemClock.elapsedRealtime()
+        if (gaze.detected) {
+            if (lastFaceAt == 0L) record("Citrouille",Evidence.OBSERVED,"Visage frontal détecté par l’API Android. Direction et fluidité du regard à vérifier sur la tablette.")
+            lastFaceAt = now
+            _state.update { it.copy(gaze = gaze) }
+        } else if (now - lastFaceAt >= 1000) _state.update { it.copy(gaze = FaceGaze()) }
+    }
     fun sleep() {
+        dismissPumpkin()
         stopVideo(); stopPtz()
         _state.update { it.copy(sleeping = true) }
         record("Veille", Evidence.OBSERVED, "Écran sombre logiciel demandé ; l’application reste au premier plan. Extinction physique non demandée.")
@@ -295,6 +375,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         if (_state.value.sleeping) { _state.update { it.copy(sleeping = false) }; record("Veille", Evidence.OBSERVED, "Réveil de l’interface : $reason.") }
     }
     fun enablePresence(enabled: Boolean) {
+        if (enabled && (_state.value.resources?.protect == true || !_state.value.foreground)) return
         _state.update { it.copy(cameraEnabled = enabled) }
         if (!enabled) record("Présence", Evidence.NOT_TESTED, "Analyse arrêtée ; aucune image conservée.")
     }
@@ -305,12 +386,13 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
         _state.update { it.copy(motionScore = score, motionFrames = it.motionFrames + 1, motionEvents = it.motionEvents + if (detected) 1 else 0) }
         if (firstFrame) record("Présence", Evidence.OBSERVED, "Première image analysée localement. Détection de mouvement à tester devant la tablette.")
         if (firstDetection) record("Présence", Evidence.OBSERVED, "Variation de luminance détectée. Présence humaine et faux positifs à vérifier sur place.")
-        if (detected) { interact(); if (_state.value.sleeping) wake("mouvement détecté localement") }
+        if (detected && !_state.value.config.home.pumpkin.enabled) { interact(); if (_state.value.sleeping) wake("mouvement détecté localement") }
         if (detected && !_state.value.animation) ruleEngine.match(_state.value.config.home.rules, "presence", SystemClock.elapsedRealtime()).firstOrNull()?.let { playRule(it, false) }
     }
     fun foreground(active: Boolean) {
         _state.update { it.copy(foreground = active) }
         if (!active) {
+            dismissPumpkin()
             dismissAnimation()
             operation?.cancel(); stopVideo(); enablePresence(false)
             viewModelScope.launch { disconnect() }

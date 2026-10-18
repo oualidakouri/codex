@@ -1,14 +1,23 @@
-# Maison OS · Android 1.2
+# Maison OS · Android 1.3
 
 Tableau de bord mural pour tablette Android : salat et adhan hors ligne, douas sourcées, caméras locales, veille et événements. Application native Kotlin / Jetpack Compose, sans serveur ou Home Assistant obligatoire.
 
 ## Installer l’APK
 
-**[Télécharger Maison OS 1.2.0 (.apk)](downloads/maison-os-1.2.0.apk?raw=true)**
+**[Télécharger Maison OS 1.3.0 (.apk)](downloads/maison-os-1.3.0.apk?raw=true)**
 
-Si le lien ne télécharge pas, ouvrir [la page du fichier](downloads/maison-os-1.2.0.apk), puis cliquer sur **Download raw file** en haut à droite dans GitHub. Ouvrir GitHub dans le navigateur ; se connecter si le dépôt est privé.
+Si le lien ne télécharge pas, ouvrir [la page du fichier](downloads/maison-os-1.3.0.apk), puis cliquer sur **Download raw file** en haut à droite dans GitHub. Ouvrir GitHub dans le navigateur ; se connecter si le dépôt est privé.
 
 La V1 se met à jour **par-dessus l’APK de diagnostic**, sans désinstallation : même identifiant `fr.maisonos.diagnostic` et même clé de développement dans cet environnement. La configuration existante est migrée, y compris les caméras et leurs identifiants. Depuis la version 1.1, les mises à jour sont aussi proposées dans **Paramètres → Mises à jour** : rechercher, télécharger, puis confirmer dans Android. Les APK générées ailleurs, notamment en CI, ont leur propre clé de développement ; utiliser l’APK fournie dans `downloads` pour cette mise à jour.
+
+## Nouveautés 1.3
+
+- Commandes Coran directement dans le widget : volume, sourate et récitant précédents/suivants ; barre de progression déplaçable et temps écoulé/durée. Les flèches changent immédiatement la lecture active ; à l’arrêt, elles modifient uniquement la sélection.
+- Carte Coran agrandie sans perdre les caméras/profils ; défilement possible après un redimensionnement plus petit. Le catalogue est l’entrée principale, le flux personnel reste facultatif.
+- **Paramètres → Laboratoire · Citrouille 3D** : rendu OpenGL transparent, yeux orientés vers le visage frontal détecté localement. Essai immédiat, démonstration simulée sans caméra, délai et durée automatiques. Aucun enregistrement ni service caméra en arrière-plan.
+- Suivi humain et fluidité réels **à vérifier sur la tablette** : seuls le rendu, les commandes et la caméra virtuelle peuvent être testés ici.
+
+Voir [les notes 1.3](docs/releases/1.3.0.md) et [la validation 1.3](docs/VALIDATION-1.3.0.md).
 
 ## Nouveautés 1.2
 
@@ -83,7 +92,7 @@ Les sources, versions et mentions sont accessibles dans **Paramètres → Source
 Augmenter `versionCode` et `versionName`, écrire les notes, compiler et vérifier, puis exécuter :
 
 ```sh
-JAVA_HOME=/workspace/toolchains/jdk-21.0.8+9 python tools/prepare-release.py --sdk /workspace/android-sdk --notes docs/releases/1.2.0.md
+JAVA_HOME=/workspace/toolchains/jdk-21.0.8+9 python tools/prepare-release.py --sdk /workspace/android-sdk --notes docs/releases/1.3.0.md
 ```
 
 Le script vérifie la signature historique, crée une APK avec un nom de version et `downloads/update.json` (version, URL HTTPS, taille, SHA-256). Publier les deux ensemble sur GitHub. Ne jamais commiter la clé de signature. Les versions déjà publiées ne sont pas écrasées : augmenter leur numéro. Le bouton intégré utilise ce manifeste, sans compte GitHub ni permission de désinstallation.

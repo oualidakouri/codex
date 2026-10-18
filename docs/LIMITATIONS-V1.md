@@ -1,4 +1,4 @@
-# Limites de Maison OS 1.2
+# Limites de Maison OS 1.3
 
 - Les retours utilisateur ont validé le diagnostic sur sa tablette et au moins la vidéo/PTZ d’une caméra. La seconde caméra est désormais découverte en DVRIP/RTSP selon le retour utilisateur ; son authentification, son format RTSP et son ONVIF restent à vérifier.
 - Le matériel domestique est inaccessible depuis le cloud. Les tests JVM et émulateur ne certifient ni les caméras réelles, ni l’audio audible, ni la stabilité prolongée sur Android 16.
@@ -23,3 +23,6 @@
 - L’audio reste actif en veille/arrière-plan après l’action Lecture et s’arrête par le widget, l’écran ou la notification. La notification dépend des permissions Android ; l’adhan interrompt le Coran, sans reprise automatique. Aucune commande de lecture à distance ou reprise après panne n’est ajoutée.
 - Prévisions : trois jours futurs selon les données disponibles ; conseils vestimentaires indicatifs. Pluie ou ressenti indisponibles restent marqués manquants. Les dates du cache sont visibles.
 - Actualités : flux Franceinfo/Google Actualités ou RSS personnels. La recherche locale par nom de ville peut inclure des mentions hors de la commune. Affichage des titres seulement ; lecture de l’article dans le navigateur. Les API RSS sont bloquées par le proxy du cloud, donc accès réel à vérifier sur la tablette. Aucun titre fictif n’est préchargé comme actualité.
+
+- Citrouille : détecteur frontal Android embarqué, sensible à la pose, lumière et taille du visage ; il détecte un visage, pas le corps d’une personne ni son identité. La caméra virtuelle ne prouve pas le suivi d’un visiteur. Le sens du regard, la fluidité OpenGL et l’autonomie Android 16 restent non vérifiés sur le matériel réel. Plusieurs visages peuvent provoquer un changement de cible, le plus grand étant retenu. L’overlay est transparent sur l’application, pas une superposition au-dessus des autres applications. Le mode automatique remplace temporairement la veille sombre et consomme plus ; il est désactivé par défaut.
+- La timeline dépend de la durée et de la déplaçabilité annoncées par Media3/serveur. Une radio en direct n’offre pas forcément de déplacement. Les nouveaux boutons règlent le volume applicatif ; un volume média Android nul garde l’audio silencieux.

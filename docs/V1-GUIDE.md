@@ -1,8 +1,8 @@
-# Utiliser Maison OS 1.2
+# Utiliser Maison OS 1.3
 
 ## Mise à jour
 
-Installer `downloads/maison-os-1.2.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La mise à jour reprend les caméras enregistrées et leurs identifiants ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
+Installer `downloads/maison-os-1.3.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La mise à jour reprend les caméras enregistrées et leurs identifiants ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
 
 ## Dashboard
 
@@ -83,3 +83,17 @@ La récitation continue en veille et en arrière-plan, s’arrête à la fin d�
 Le widget Actualités est ajouté à la première page. Il affiche des titres nationaux et locaux avec sources et liens. Toucher un titre ouvre le navigateur ; Lire/configurer ouvre la liste complète. Actualisation automatique toutes les quinze minutes au premier plan, et bouton Actualiser manuel.
 
 Dans Actualités → Configurer, laisser Ville vide pour reprendre la ville météo (sinon salat), ou saisir votre commune. La source nationale est Franceinfo ; un bouton propose Google Actualités France. Le local utilise une recherche Google Actualités sur le nom de la ville. Un flux RSS/Atom HTTPS personnel peut remplacer chaque source. En cas de panne Internet, les derniers titres restent datés ; aucun titre d’exemple n’est présenté comme réel.
+
+## Commandes du Coran dans le dashboard
+
+La carte contient Lecture/Arrêter, Son −/+ par pas de 10 %, ◀/▶ Sourate et ▲/▼ Récitant. Les listes bouclent ; si la sourate n’existe pas chez le nouveau récitant, sa première sourate disponible est choisie. En lecture, le changement relance la sélection après enregistrement ; à l’arrêt, il prépare simplement le prochain choix. Le volume système Android reste indépendant.
+
+La barre affiche le temps écoulé et la durée connue. Glissez-la puis relâchez pour avancer/reculer. Elle reste désactivée avant le chargement et sur une radio en direct non déplaçable. La carte est agrandie à la mise à jour ; elle peut défiler si vous la réduisez. « Choisir » ouvre le catalogue complet. Le flux personnel reste dans Coran → Flux personnel · facultatif.
+
+## Essayer la citrouille
+
+Dans Paramètres → Laboratoire · Citrouille 3D, **Démonstration sans caméra** montre un regard animé, explicitement simulé. **Tester le suivi avec la caméra** demande la permission Android puis cherche le visage frontal le plus grand. Placez-vous de face dans une pièce éclairée, bougez lentement à gauche/droite et en hauteur. Le message distingue ouverture, visage détecté, absence de visage et indisponibilité. Aucune image n’est enregistrée. Un visage incliné, masqué, trop petit ou dans l’obscurité peut ne pas être détecté.
+
+Pour l’apparition automatique, activez l’interrupteur, choisissez le délai après inactivité (5 s, 30 s, 1 min ou 5 min) et la durée d’affichage (15 s, 1 min, 2 min ou 5 min). Ce mode remplace la veille sombre tant qu’il est actif. Une interaction tactile remet le délai à zéro. Toucher l’écran, Fermer ou Retour retire la citrouille ; elle disparaît aussi à la fin de la durée, à la sortie de Maison OS, pendant l’adhan ou en protection thermique/batterie. Aucun fonctionnement caméra lorsque l’écran est physiquement éteint ou l’application en arrière-plan.
+
+Le rendu et le suivi restent expérimentaux sur la tablette : confirmer le sens des yeux, la fluidité et l’échauffement avant de laisser l’apparition automatique activée longtemps.

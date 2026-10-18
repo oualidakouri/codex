@@ -60,7 +60,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
     val day = days?.getOrNull()?.firstOrNull { it.date == date }
     val next = days?.getOrNull()?.flatMap { it.moments }?.sortedBy { it.epochMillis }?.firstOrNull { it.epochMillis > now.toEpochMilli() }
     val playing by AdhanPlayback.title.collectAsState()
-    LaunchedEffect(playing) { if (playing != null) vm.wake("adhan") }
+    LaunchedEffect(playing) { if (playing != null) { vm.dismissPumpkin(); vm.wake("adhan") } }
     val wide = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.width.toDp() >= 760.dp }
     LaunchedEffect(home.presenceOnLaunch, s.foreground) {
         if (home.presenceOnLaunch && s.foreground && ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED && s.resources?.protect != true) vm.enablePresence(true)
@@ -113,7 +113,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 }
             }
         }
-        if (s.cameraEnabled && s.foreground) Box(Modifier.align(Alignment.BottomEnd)) { PresenceCamera(vm, false) }
+        if (s.foreground && ((s.cameraEnabled && !s.pumpkinActive) || (s.pumpkinActive && !s.pumpkinSimulated && !s.pumpkinCameraError))) Box(Modifier.align(Alignment.BottomEnd)) { PresenceCamera(vm, false,trackFace = s.pumpkinActive) }
         if (s.sleeping) Box(Modifier.fillMaxSize().background(Color.Black).clickable { vm.wake() }, contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(18.dp)) {
                 Text(now.atZone(zone).format(DateTimeFormatter.ofPattern("HH:mm")), fontSize = 96.sp, fontWeight = FontWeight.Light, color = Color(0xFF8993A2))
@@ -122,9 +122,10 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 Text("Toucher pour réveiller", fontSize = 12.sp, color = Color(0xFF404956))
             }
         }
+        if (s.pumpkinActive && s.foreground) PumpkinOverlay(s,vm)
         if (s.animation) EventOverlay(s, vm)
         val update by vm.updates.state.collectAsState()
-        if (update.prompt && s.foreground && !s.sleeping && !s.animation && playing == null) UpdateDialog(update, vm.updates)
+        if (update.prompt && s.foreground && !s.sleeping && !s.animation && !s.pumpkinActive && playing == null) UpdateDialog(update, vm.updates)
         if (playing != null) Dialog(onDismissRequest = { AdhanPlayback.stop(context) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -192,7 +193,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                         var resize by remember { mutableStateOf(Offset.Zero) }
                         var inView by remember { mutableStateOf(false) }
                         val cameraIndex = visible.filter { it.kind == WidgetKind.CAMERA }.indexOfFirst { it.id == widget.id }
-                        val streaming = !edit && preview == null && s.foreground && !s.sleeping && !s.animation && audioFree && s.resources?.protect != true && home.liveDashboard && cameraIndex < home.maxStreams && inView
+                        val streaming = !edit && preview == null && s.foreground && !s.sleeping && !s.animation && !s.pumpkinActive && audioFree && s.resources?.protect != true && home.liveDashboard && cameraIndex < home.maxStreams && inView
                         Box(Modifier.offset { IntOffset((widget.x * cellWidthPx + drag.x).roundToInt(), (widget.y * cellHeightPx + drag.y).roundToInt()) }
                             .width(cellWidth * widget.w).height(cellHeight * widget.h).padding(6.dp).testTag("widget-${widget.kind.name}")
                             .onGloballyPositioned { coordinates -> val rect = coordinates.boundsInWindow(); inView = rect.width > 8 && rect.height > 8 }
@@ -307,7 +308,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
             }
             WidgetKind.WEATHER -> WeatherWidget(home.weather, vm, now) { navigate("Météo") }
             WidgetKind.SWITCHES -> Text("Connectiques reportées",fontSize = 12.sp)
-            WidgetKind.QURAN -> QuranControls(home.quran,true) { navigate("Coran") }
+            WidgetKind.QURAN -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) { QuranControls(home.quran,true,configure = { navigate("Coran") },vm = vm) }
             WidgetKind.NEWS -> NewsWidget(home,vm) { navigate("Actualités") }
             WidgetKind.MAILBOX -> {
                 Text("✉", fontSize = 36.sp, color = MaterialTheme.colorScheme.primary)
