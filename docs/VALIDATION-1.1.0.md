@@ -9,6 +9,7 @@ Le code et les résultats complets sont dans [verification-1.1.0](../downloads/v
 | Android ciblé | 8 scénarios réussis sur le premier candidat |
 | Contrôle APK sur la compilation finale | 1 scénario rejoué et réussi : version, package et certificat |
 | Signature de mise à jour | Identique au diagnostic et à la V1 |
+| Téléchargement GitHub public | Manifeste et APK HTTP 200 ; taille et SHA-256 conformes |
 | Caméras et Smart Life physiques | Non vérifiés depuis le cloud |
 | Accès météo réel et position | Non vérifiés ; Open-Meteo bloqué par le proxy cloud |
 | Endurance et restrictions Android 16 | À tester sur la tablette |

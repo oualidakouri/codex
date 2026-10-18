@@ -7,6 +7,7 @@
 - `gradle-final.txt` : APK, APK de tests et analyse Android compilées avec succès.
 - `jvm-results.xml` : 47 tests exécutés, zéro échec, erreur ou test ignoré. Les builds finaux ont réutilisé ces résultats sans changement du module core.
 - `lint.txt` : 0 erreur et 23 avertissements (style KTX, versions de bibliothèques et HTTP local assumé pour ONVIF notamment).
+- `github-download.json` : manifeste et APK relus depuis les URL publiques après publication ; HTTP 200, taille et SHA-256 conformes.
 - `signature.txt` : certificat identique à l’APK de diagnostic et à la V1 ; publication refusée par le script si ce certificat change.
 
 ## Android
