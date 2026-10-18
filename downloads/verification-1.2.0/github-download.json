@@ -1,0 +1,10 @@
+{
+  "checkedAt": "2026-10-18T21:47:43.019381+02:00",
+  "manifestUrl": "https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/update.json",
+  "manifestHttpStatus": 200,
+  "apkUrl": "https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/maison-os-1.2.0.apk",
+  "apkHttpStatus": 200,
+  "size": 18009121,
+  "sha256": "64d339288148715c00272290e22b169a72238c8cef9ccf313e7ad802ffd900a2",
+  "matchesPublishedManifest": true
+}

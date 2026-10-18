@@ -8,6 +8,7 @@ APK `../maison-os-1.2.0.apk`, package fr.maisonos.diagnostic, version 1.2.0 / co
 - `jvm-results.xml` : **55 tests JVM réussis**, zéro échec, erreur ou test ignoré. Les résultats incluent huit nouveaux scénarios : trois jours futurs au changement d’heure, données manquantes, RSS/Atom et refus XXE, titres/sources/liens, ville non devinée, catalogue/sourates disponibles, URL audio privée exclue des exports et migration des widgets.
 - `lint.txt` : **0 erreur, 26 avertissements**, principalement style KTX, versions disponibles et HTTP local ONVIF conservé.
 - `signature.txt` : certificat identique aux APK précédentes ; clé privée exclue de Git et des assets.
+- `github-download.json` : manifeste et APK téléchargés depuis les URL publiques après publication ; HTTP 200, taille et SHA-256 conformes.
 - `checksums.sha256` : empreinte de l’APK. Catalogue initial et notices comparés à ceux présents dans le ZIP APK.
 
 ## Android réellement exécuté

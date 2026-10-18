@@ -10,6 +10,7 @@ Les journaux et détails sont dans [verification-1.2.0](../downloads/verificatio
 | Lecture réseau du lecteur | Vrai HTTP local et décodage/lecture Media3 observés, arrêt par le bouton |
 | Catalogue initial | 7 récitants, 114 noms, métadonnées versionnées et notices incluses |
 | Mise à jour APK | Même certificat ; contrôle version/package/signature exécuté |
+| Téléchargement GitHub public | Manifeste et APK HTTP 200 ; empreinte et taille conformes |
 | API météo, MP3Quran et actualités en direct | Non vérifiées : proxy cloud HTTP 403 |
 | Son audible et endurance Android 16 | À vérifier sur la tablette |
 | Home Assistant et interrupteurs | Reportés, pas connectés |
