@@ -16,8 +16,8 @@ android {
         applicationId = "fr.maisonos.diagnostic"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10
-        versionName = "1.0.0"
+        versionCode = 11
+        versionName = "1.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -26,6 +26,18 @@ android {
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 kotlin { jvmToolchain(21) }
+val generateUpdateFixtures by tasks.registering(Exec::class) {
+    dependsOn(prepareDebugKey)
+    inputs.file(rootProject.file("tools/create-update-fixtures.py"))
+    inputs.file(debugKey)
+    inputs.property("appVersion", android.defaultConfig.versionCode ?: 1)
+    val destination = layout.buildDirectory.dir("generated/update-test-assets")
+    outputs.dir(destination)
+    doFirst { commandLine("python3", rootProject.file("tools/create-update-fixtures.py"), android.sdkDirectory,
+        System.getProperty("java.home"), debugKey, destination.get().asFile, android.defaultConfig.versionCode.toString()) }
+}
+android.sourceSets.getByName("androidTest").assets.srcDir(layout.buildDirectory.dir("generated/update-test-assets"))
+tasks.configureEach { if (name.contains("DebugAndroidTest")) dependsOn(generateUpdateFixtures) }
 dependencies {
     implementation(project(":core"))
     implementation(platform("androidx.compose:compose-bom:2025.10.01"))

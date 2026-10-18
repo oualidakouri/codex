@@ -58,10 +58,11 @@ class MainActivity : ComponentActivity() {
         setContent {
             val vm = model
             val state by vm.state.collectAsStateWithLifecycle()
-            val accent = when (state.config.home.accent) { "blue" -> Color(0xFF8FBAFF); "amber" -> Color(0xFFF1C983); else -> Color(0xFF6AE0C2) }
-            MaterialTheme(colorScheme = if (state.config.home.dark) darkColorScheme(primary = accent, background = Color(0xFF0B121B),
-                surface = Color(0xFF141F2B), onSurface = Color(0xFFE6EDF5), secondary = Color(0xFF9FAFC4))
-                else lightColorScheme(primary = when (state.config.home.accent) { "blue" -> Color(0xFF2B5B9C); "amber" -> Color(0xFF8F5A17); else -> Color(0xFF246A60) }, background = Color(0xFFF3F5F5), surface = Color.White, secondary = Color(0xFF596C7D))) {
+            val palette = ThemeCatalog.forHome(state.config.home)
+            val colors = if (palette.dark) darkColorScheme() else lightColorScheme()
+            MaterialTheme(colorScheme = colors.copy(primary = Color(palette.accent), onPrimary = Color(palette.onAccent),
+                background = Color(palette.background), onBackground = Color(palette.text), surface = Color(palette.surface), onSurface = Color(palette.text),
+                secondary = Color(palette.muted), onSurfaceVariant = Color(palette.muted), primaryContainer = Color(palette.surface), onPrimaryContainer = Color(palette.text))) {
                 LaunchedEffect(state.config.keepAwake, state.foreground) {
                     if (state.config.keepAwake && state.foreground) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                     else window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -69,11 +70,11 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(state.sleeping) {
                     window.attributes = window.attributes.apply { screenBrightness = if (state.sleeping) 0.01f else WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE }
                 }
-                MaisonApp(state, vm)
+                Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background, contentColor = MaterialTheme.colorScheme.onBackground) { MaisonApp(state, vm) }
             }
         }
     }
-    override fun onResume() { super.onResume(); if (::model.isInitialized) { model.foreground(true); model.reschedulePrayers() } }
+    override fun onResume() { super.onResume(); if (::model.isInitialized) { model.foreground(true); model.reschedulePrayers(); model.checkUpdates() } }
     override fun onPause() { if (::model.isInitialized) model.foreground(false); super.onPause() }
     override fun dispatchTouchEvent(event: MotionEvent): Boolean {
         if (::model.isInitialized && (event.actionMasked == MotionEvent.ACTION_DOWN || event.actionMasked == MotionEvent.ACTION_MOVE)) model.interact()
@@ -217,6 +218,9 @@ class MainActivity : ComponentActivity() {
             Field("Chemin ONVIF", c.onvifPath, { v -> camera { it.copy(onvifPath = v) } })
             Field("URL RTSP sans identifiants", c.rtspUrl, { v -> camera { it.copy(rtspUrl = v.trim()) } })
             Field("URL RTSP principale (plein écran, facultative)", c.mainRtspUrl, { v -> camera { it.copy(mainRtspUrl = v.trim()) } })
+            Choice(listOf("RTSP standard / URI ONVIF", "RTSP iCSee / Xiongmai (identifiants dans le chemin)"), if (c.rtspVendorPath) 1 else 0) { index -> camera { it.copy(rtspVendorPath = index == 1) } }
+            OutlinedButton(enabled = c.host.isNotBlank(), onClick = { camera { it.copy(rtspVendorPath = true, rtspUrl = "rtsp://${it.host}:554/stream=1", mainRtspUrl = "rtsp://${it.host}:554/stream=0") } }) { Text("Préparer les chemins iCSee / Xiongmai") }
+            Text("Ce format est à tester selon le firmware. Il utilise uniquement vos identifiants saisis ; aucun compte par défaut n’est essayé. Enregistrer avant le test RTSP.", fontSize = 11.sp)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = c.dvripPtzConfirmed, onCheckedChange = { v -> camera { it.copy(dvripPtzConfirmed = v) } })
                 Text("J’autorise le test PTZ DVRIP sur cette caméra motorisée. Je vérifierai son arrêt visuellement.", fontSize = 12.sp)
@@ -227,6 +231,9 @@ class MainActivity : ComponentActivity() {
         }
         Panel("Validation par protocole") {
             val enabled = !s.busy && !s.simulation
+            Text("Le scan approfondi /24 recherche DVRIP et RTSP. Une ligne sans ONVIF ne prouve pas son absence. Le Wi-Fi 5 GHz fonctionne avec le 2,4 GHz si les réseaux ne sont pas isolés.", fontSize = 12.sp)
+            OutlinedButton(enabled = enabled, onClick = vm::checkCameraPorts) { Text("Vérifier les ports de cette caméra") }
+            s.cameraPorts.forEach { result -> Text("${result.label} : ${result.port} · ${if (result.reachable) "accessible" else "non joignable"}\n${result.detail}", fontSize = 12.sp) }
             OutlinedButton(enabled = enabled, onClick = vm::connectDvrip) { Text("Tester l’authentification DVRIP") }
             Status(s.diagnostics["DVRIP"]!!)
             OutlinedButton(enabled = enabled, onClick = vm::inspectOnvif) { Text("Tester ONVIF / obtenir le profil RTSP") }

@@ -5,6 +5,10 @@ import android.net.Uri
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.graphics.toArgb
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.core.app.ApplicationProvider
 import fr.maisonos.core.*
 import org.junit.*
@@ -30,7 +34,7 @@ class ProbeInstrumentedTest {
         // Exercise the configurable duration with a longer rule before asserting its label.
         val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
         compose.waitUntil(20000) { vm.state.value.report != "Lecture du matériel…" }
-        val fixture = ProbeConfig(home = HomeConfig(liveDashboard = false, rules = listOf(LocalRule(durationSeconds = 60))))
+        val fixture = ProbeConfig(home = HomeConfig(liveDashboard = false, rules = listOf(LocalRule(durationSeconds = 60)), updates = UpdateSettings(enabled = false)))
         compose.runOnUiThread { vm.save(fixture) }
         compose.waitUntil(20000) { vm.state.value.config == fixture && !vm.state.value.busy }
         compose.activityRule.scenario.recreate()
@@ -60,11 +64,13 @@ class ProbeInstrumentedTest {
     }
     @Test fun encryptedConfigurationSurvivesNewStoreInstanceAndExportExcludesAllCameraSecrets() {
         val camera = CameraConfig(host = "192.168.1.2", username = "test-user", password = "instrumented-secret", rtspUrl = "rtsp://192.168.1.2/live?token=sensitive", mainRtspUrl = "rtsp://192.168.1.2/main?token=main-secret")
-        val config = ProbeConfig(camera = camera, home = HomeConfig(cameras = listOf(camera), liveDashboard = false))
+        val relay = LocalSwitch(kind = SwitchKind.TUYA_33, host = "192.168.1.3", deviceId = "fixture", password = "tuya-test-secret")
+        val config = ProbeConfig(camera = camera, home = HomeConfig(cameras = listOf(camera), liveDashboard = false, switches = listOf(relay)))
         val store = ConfigStore(context); store.save(config)
         assertEquals(config, ConfigStore(context).load())
         val export = store.export(config)
         assertFalse(export.contains("instrumented-secret")); assertFalse(export.contains("sensitive")); assertFalse(export.contains("main-secret"))
+        assertFalse(export.contains("tuya-test-secret"))
         val restored = store.parseImport(export)
         assertEquals(camera.host, restored.camera.host); assertEquals("", restored.camera.password)
         assertEquals("", restored.home.cameras.single().rtspUrl)
@@ -80,7 +86,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(2, migrated.version); assertEquals(300,migrated.idleSeconds)
+        assertEquals(3, migrated.version); assertEquals(300,migrated.idleSeconds)
         assertEquals("old-secret", migrated.home.cameras.single().password)
         assertTrue(migrated.home.profile().landscape.any { it.kind == WidgetKind.CAMERA })
     }
@@ -113,6 +119,66 @@ class ProbeInstrumentedTest {
         assertTrue(duas.all { it.source.startsWith("Coran ") && it.arabic.any { char -> char in '\u0600'..'\u06ff' } && it.french.isNotBlank() })
         assertEquals(Duas.daily(context, java.time.LocalDate.of(2026,10,18)), Duas.daily(context, java.time.LocalDate.of(2026,10,18)))
         assertNotEquals(Duas.daily(context, java.time.LocalDate.of(2026,10,18)).id, Duas.daily(context, java.time.LocalDate.of(2026,10,19)).id)
+    }
+    @Test fun updateApkMustHaveFutureVersionCorrectPackageAndSameSignature() {
+        val appUpdates = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java].updates
+        val assets = InstrumentationRegistry.getInstrumentation().context.assets
+        for (name in listOf("future", "wrong-signer", "wrong-package", "same-version")) {
+            val file = File(context.cacheDir, "fixture-$name.apk")
+            try {
+                assets.open("$name.apk").use { input -> file.outputStream().use { input.copyTo(it) } }
+                val release = AppRelease(BuildConfig.VERSION_CODE.toLong() + 1, "fixture", "https://example.com/app.apk", "a".repeat(64), context.packageName, file.length())
+                if (name == "future") appUpdates.verifyArchive(file, release)
+                else assertThrows(IllegalArgumentException::class.java) { appUpdates.verifyArchive(file, release) }
+            } finally { file.delete() }
+        }
+    }
+    @Test fun darkAndLightThemesApplyReadableTextToNavigationAndRoot() {
+        val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
+        for (theme in listOf("forest", "sand")) {
+            compose.runOnUiThread { vm.updateHome { it.copy(theme = theme) } }
+            compose.waitUntil(15000) { vm.state.value.config.home.theme == theme }
+            compose.waitForIdle()
+            val expected = ThemeCatalog.forHome(vm.state.value.config.home).text.toInt()
+            for (node in listOf(compose.onNodeWithText("Bienvenue à la maison"), compose.onNodeWithText("Interrupteurs", useUnmergedTree = true))) {
+                val layouts = mutableListOf<TextLayoutResult>()
+                node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
+                assertEquals(expected,layouts.single().layoutInput.style.color.toArgb())
+            }
+        }
+    }
+    @Test fun dailyDuaIsArabicOnlyAndSwitchSimulationIsExplicit() {
+        compose.onNodeWithTag("nav-Douas").performClick()
+        val dua = Duas.daily(context, java.time.LocalDate.now(), 0)
+        compose.onNodeWithText(dua.french).assertDoesNotExist()
+        compose.onNodeWithTag("nav-Interrupteurs").performClick()
+        compose.onNodeWithTag("add-simulated-switch").performClick()
+        compose.waitUntil(15000) { ConfigStore(context).load().home.switches.size == 1 }
+        val id = ConfigStore(context).load().home.switches.single().id
+        compose.onNodeWithTag("switch-on-$id").performScrollTo().performClick()
+        compose.onNodeWithText("Allumé").assertExists()
+        compose.onNodeWithText("SIMULATION · aucun appareil commandé").assertExists()
+    }
+    @Test fun widgetSizeCanBeChangedWithButtonsWithoutDragging() {
+        val old = ConfigStore(context).load().home.profile().landscape.first { it.kind == WidgetKind.CLOCK }
+        compose.onNodeWithTag("edit-dashboard").performClick()
+        compose.onNodeWithTag("widget-settings-CLOCK").performClick()
+        compose.onNodeWithText("Largeur −").performClick()
+        compose.onNodeWithText("Enregistrer").performClick()
+        compose.waitUntil(15000) { ConfigStore(context).load().home.profile().landscape.first { it.id == old.id }.w == old.w - 1 }
+    }
+    @Test fun v1ConfigurationUpgradeKeepsBothCameraSecretsAndAddsTwoHomeTiles() {
+        val text = """{"version":2,"camera":{"id":"first","host":"192.168.1.2","username":"fixture","password":"first-secret"},"home":{"cameras":[{"id":"first","host":"192.168.1.2","username":"fixture","password":"first-secret"},{"id":"second","host":"192.168.1.3","username":"fixture","password":"second-secret"}],"maxStreams":1,"lastPage":"Caméras","theme":"classic"}}"""
+        val key = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.getKey("maison.config.v1", null)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
+        File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
+        val migrated = ConfigStore(context).load()
+        assertEquals(3,migrated.version); assertEquals("first-secret",migrated.camera.password)
+        assertEquals(listOf("first-secret","second-secret"),migrated.home.cameras.map { it.password })
+        assertEquals(2,migrated.home.maxStreams); assertEquals("Caméras",migrated.home.lastPage)
+        for (tiles in listOf(migrated.home.profile().landscape,migrated.home.profile().portrait)) {
+            assertEquals(setOf("first","second"),tiles.filter { it.kind == WidgetKind.CAMERA && it.y == 0 && it.page == 0 }.map { it.cameraId }.toSet())
+        }
     }
     @Test fun zipBackupRestoresMediaAndRejectsTraversal() {
         val id = UUID.randomUUID().toString(); val mediaFile = LocalFiles.mediaFile(context,id);mediaFile.writeBytes(byteArrayOf(1,2,3,4))

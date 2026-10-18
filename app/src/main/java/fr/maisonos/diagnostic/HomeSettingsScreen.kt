@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package fr.maisonos.diagnostic
 
 import android.Manifest
@@ -15,7 +16,7 @@ import androidx.compose.ui.unit.*
 import fr.maisonos.core.*
 import kotlinx.coroutines.*
 
-@Composable fun HomeSettingsScreen(s: ProbeState, vm: ProbeViewModel) {
+@Composable fun HomeSettingsScreen(s: ProbeState, vm: ProbeViewModel, navigate: (String) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val home = s.config.home
@@ -36,11 +37,27 @@ import kotlinx.coroutines.*
     var restoreConfirm by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Panel("L’apparence de votre maison") {
-            Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = home.dark, onCheckedChange = { dark -> vm.updateHome { it.copy(dark = dark) } }); Text("Thème sombre") }
-            Choice(listOf("Menthe", "Bleu", "Ambre"), listOf("mint", "blue", "amber").indexOf(home.accent)) { index -> vm.updateHome { it.copy(accent = listOf("mint", "blue", "amber")[index]) } }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp), maxItemsInEachRow = 3) {
+                ThemeCatalog.themes.forEach { theme ->
+                    Surface(color = androidx.compose.ui.graphics.Color(theme.background), contentColor = androidx.compose.ui.graphics.Color(theme.text), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                        border = BorderStroke(if (home.theme == theme.id) 3.dp else 1.dp, if (home.theme == theme.id) androidx.compose.ui.graphics.Color(theme.accent) else androidx.compose.ui.graphics.Color(theme.muted)),
+                        modifier = Modifier.width(185.dp).height(100.dp).clickable { vm.updateHome { it.copy(theme = theme.id, dark = theme.dark) } }) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            Text(if (home.theme == theme.id) "✓ ${theme.name}" else theme.name, fontSize = 15.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { listOf(theme.accent, theme.surface, theme.muted).forEach { color -> Box(Modifier.size(24.dp).background(androidx.compose.ui.graphics.Color(color), androidx.compose.foundation.shape.CircleShape)) } }
+                        }
+                    }
+                }
+            }
             Text("Fond d’écran personnel")
             MediaChoice(home.media.filter { it.kind == MediaKind.IMAGE }, home.wallpaperId, "Fond uni") { id -> vm.updateHome { it.copy(wallpaperId = id) } }
             Text("La disposition et la transparence se règlent depuis Accueil → Personnaliser. Les dispositions paysage et portrait sont conservées séparément.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+        }
+        UpdateSettingsPanel(s, vm)
+        Panel("Météo de ma ville") {
+            Text(if (home.weather.configured) home.weather.city else "Choisissez votre ville ou utilisez la position actuelle.")
+            Button(onClick = { navigate("Météo") }) { Text("Configurer ma météo") }
+            Text("Température extérieure via Open-Meteo. La température de batterie est affichée séparément dans l’état de la tablette.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
         }
         Panel("Profils de dashboard") {
             home.profiles.forEach { profile -> Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -52,6 +69,7 @@ import kotlinx.coroutines.*
             OutlinedButton(onClick = { reset = true }) { Text("Réinitialiser la disposition du profil actif") }
         }
         Panel("Caméras et consommation") {
+            Button(onClick = { vm.updateHome { it.withCameraTiles() } }) { Text("Afficher mes deux caméras en haut de l’accueil") }
             Choice(listOf("1 flux simultané · économie", "2 flux simultanés · mosaïque"), home.maxStreams - 1) { count -> vm.updateHome { it.copy(maxStreams = count + 1) } }
             Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = home.liveDashboard, onCheckedChange = { live -> vm.updateHome { it.copy(liveDashboard = live) } }); Text("Aperçus en direct dans les widgets") }
             Text("Utiliser les sous-flux basse résolution. Les vidéos non visibles, la veille et les alertes thermiques suspendent les lecteurs. Le plein écran peut utiliser une URL principale distincte.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
@@ -84,7 +102,7 @@ import kotlinx.coroutines.*
             OutlinedButton(onClick = { restoreConfirm = true }) { Text("Restaurer une sauvegarde ZIP") }
             Text("L’archive contient les profils, réglages, règles, favoris et médias. Les mots de passe et URL RTSP sont exclus : les ressaisir après restauration. Limite totale 256 Mo.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
         }
-        Panel("À propos de Maison OS 1.0") {
+        Panel("À propos de Maison OS ${BuildConfig.VERSION_NAME}") {
             Text("Application Android native, locale et sans serveur obligatoire. Paramètres chiffrés avec Android Keystore. Les caméras sont testées séparément selon leurs protocoles.", fontSize = 12.sp)
             OutlinedButton(onClick = { licenses = true }) { Text("Sources et licences") }
             s.logs.lastOrNull()?.let { Text(it, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary) }

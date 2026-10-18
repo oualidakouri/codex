@@ -1,4 +1,4 @@
-name: Android diagnostics
+name: Android Maison OS
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -18,7 +18,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: maison-os-diagnostic
+          name: maison-os-ci-build
           path: |
             app/build/outputs/apk/debug/*.apk
             app/build/reports/lint-results-debug.*

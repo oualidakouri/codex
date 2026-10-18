@@ -6,6 +6,7 @@ import android.security.keystore.KeyProperties
 import android.util.AtomicFile
 import fr.maisonos.core.CameraConfig
 import fr.maisonos.core.HomeConfig
+import fr.maisonos.core.withCameraTiles
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -18,7 +19,7 @@ import javax.crypto.spec.GCMParameterSpec
 
 @Serializable
 data class ProbeConfig(
-    val version: Int = 2,
+    val version: Int = 3,
     val camera: CameraConfig = CameraConfig(),
     val idleSeconds: Int = 60,
     val motionThreshold: Float = 0.07f,
@@ -26,19 +27,20 @@ data class ProbeConfig(
     val home: HomeConfig = HomeConfig(),
 ) {
     fun validate() {
-        require(version == 2 && idleSeconds in 15..3600 && motionThreshold in 0.01f..0.5f)
+        require(version == 3 && idleSeconds in 15..3600 && motionThreshold in 0.01f..0.5f)
         if (camera.host.isNotBlank()) camera.validate()
         home.validate()
     }
     fun exportSafe() = copy(camera = camera.exportSafe(), home = home.exportSafe())
     fun migrated(): ProbeConfig {
-        require(version in 1..2)
+        require(version in 1..3)
         val cameras = if (version == 1 && home.cameras.isEmpty() && camera.host.isNotBlank()) listOf(camera) else home.cameras
         val profiles = if (version == 1 && cameras.isNotEmpty()) home.profiles.map { profile ->
             val widgets = cameras.map { c -> fr.maisonos.core.HomeWidget(kind = fr.maisonos.core.WidgetKind.CAMERA, y = 6, cameraId = c.id) }
             profile.copy(landscape = fr.maisonos.core.LayoutEngine.pack(profile.landscape + widgets, 6), portrait = fr.maisonos.core.LayoutEngine.pack(profile.portrait + widgets, 4))
         } else home.profiles
-        return copy(version = 2, home = home.copy(cameras = cameras, profiles = profiles))
+        val migrated = home.copy(cameras = cameras, profiles = profiles)
+        return copy(version = 3, home = if (version < 3 || migrated.dashboardRevision == 0) migrated.withCameraTiles() else migrated)
     }
 }
 

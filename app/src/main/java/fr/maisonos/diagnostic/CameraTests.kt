@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -29,9 +30,9 @@ import java.util.concurrent.atomic.AtomicLong
 @Composable
 fun RtspVideo(config: CameraConfig, vm: ProbeViewModel, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    var attempt by remember { mutableIntStateOf(0) }
-    var retry by remember { mutableStateOf(false) }
-    var errorCode by remember { mutableStateOf<String?>(null) }
+    var attempt by remember(config.id, config.rtspUrl, config.rtspVendorPath) { mutableIntStateOf(0) }
+    var retry by remember(config.id, config.rtspUrl, config.rtspVendorPath) { mutableStateOf(false) }
+    var errorCode by remember(config.id, config.rtspUrl, config.rtspVendorPath) { mutableStateOf<String?>(null) }
     var connectedAt by remember { mutableLongStateOf(SystemClock.elapsedRealtime()) }
     if (retry && attempt < 5) {
         LaunchedEffect(attempt, retry) {
@@ -52,8 +53,9 @@ fun RtspVideo(config: CameraConfig, vm: ProbeViewModel, modifier: Modifier = Mod
     DisposableEffect(player) {
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
-                errorCode = error.errorCodeName; retry = true
-                vm.record("RTSP", Evidence.FAILED, "${error.errorCodeName} · $attempt/5 reprise(s) effectuée(s). ${if (attempt < 5) "Nouvelle reprise programmée." else "Relancer manuellement."}")
+                val (hint, reconnect) = CameraTroubleshooting.rtsp(error)
+                errorCode = hint; retry = reconnect
+                vm.record("RTSP", Evidence.FAILED, "${config.name} · $hint ${if (reconnect && attempt < 5) "Reconnexion programmée ($attempt/5)." else "Relancer manuellement après correction."}")
             }
         }
         val analytics = object : AnalyticsListener {
@@ -74,7 +76,7 @@ fun RtspVideo(config: CameraConfig, vm: ProbeViewModel, modifier: Modifier = Mod
     Column(modifier) {
         AndroidView(factory = { PlayerView(it).apply { useController = false; this.player = player; keepScreenOn = false } },
             update = { it.player = player }, modifier = Modifier.fillMaxWidth().weight(1f))
-        errorCode?.let { androidx.compose.material3.Text("$it · ${if (attempt >= 5) "Reprises épuisées : arrêter puis relancer." else "Reconnexion en attente…"}") }
+        errorCode?.let { androidx.compose.material3.Text(it, fontSize = 11.sp, maxLines = 3) }
     }
 }
 

@@ -1,15 +1,11 @@
-# Maison OS · APK V1
+# Maison OS 1.1 · APK
 
-**[Télécharger Maison OS 1.0.0](maison-os-1.0.0.apk?raw=true)**
+**[Télécharger Maison OS 1.1.0](maison-os-1.1.0.apk?raw=true)**
 
-Si le téléchargement ne démarre pas, ouvrir [la page de l’APK](maison-os-1.0.0.apk), puis utiliser **Download raw file** (icône de téléchargement en haut à droite) dans GitHub. Ouvrir la page dans le navigateur et se connecter si le dépôt est privé.
+Si le téléchargement ne démarre pas, ouvrir [la page de l’APK](maison-os-1.1.0.apk), puis utiliser **Download raw file** dans GitHub, depuis le navigateur.
 
-## Installer
+Installer par-dessus Maison OS 1.0 ou le diagnostic, sans désinstallation. Même package et signature ; les caméras, identifiants et dispositions sont conservés. Les deux premières caméras sont replacées sur la première page.
 
-Installer **par-dessus l’APK de diagnostic**, sans la désinstaller : le package et la clé de signature sont conservés, et la caméra existante est migrée. Les APK de CI sont signées avec leur propre clé ; elles ne remplacent pas cette installation.
+Cette version ajoute les mises à jour intégrées pour les versions suivantes : Paramètres → Mises à jour de Maison OS. Le fichier [update.json](update.json) fournit version, URL, taille et SHA-256. Android confirme toujours l’installation.
 
-Ouvrir ensuite **Salat** pour configurer la ville, importer une récitation personnelle et autoriser les alarmes exactes/notifications. **Caméras** gère plusieurs équipements et une recherche approfondie ; **Accueil → Personnaliser** permet le placement et le redimensionnement des widgets.
-
-Consulter [le guide V1](../docs/V1-GUIDE.md), [les limites](../docs/LIMITATIONS-V1.md) et [la validation](../docs/VALIDATION-V1.md). Les rapports de la V1 sont dans [verification-v1](verification-v1/). L’APK 0.1.0 et ses rapports restent conservés comme livraison historique.
-
-La V1 fonctionne localement sans serveur. La lecture des caméras, le STOP mécanique, l’audio audible et le fonctionnement continu doivent être confirmés sur les équipements réels. La découverte d’une caméra n’est jamais garantie par son nom commercial ni par sa seule adresse IP.
+Voir [les notes](../docs/releases/1.1.0.md), [le guide](../docs/V1-GUIDE.md), [les limites](../docs/LIMITATIONS-V1.md) et [les résultats](../docs/VALIDATION-1.1.0.md). Les anciennes APK et preuves restent conservées pour l’historique.

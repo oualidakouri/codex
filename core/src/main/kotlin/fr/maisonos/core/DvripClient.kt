@@ -31,7 +31,8 @@ class DvripClient(private val sockets: SocketFactory = SocketFactory.getDefault(
                 put("EncryptType", "MD5"); put("LoginType", "DVRIP-Web")
                 put("UserName", config.username); put("PassWord", SofiaHash.hash(config.password))
             })
-            check(answer["Ret"]?.jsonPrimitive?.int == 100) { "Authentification DVRIP refusée (code ${answer["Ret"]?.jsonPrimitive?.intOrNull ?: -1})." }
+            val code = answer["Ret"]?.jsonPrimitive?.intOrNull
+            if (code != 100) throw CameraProtocolFailure(CameraFailureKind.AUTHENTICATION, code?.takeIf { it in 0..9999 })
             session = answer["SessionID"]!!.jsonPrimitive.content.removePrefix("0x").toUInt(16)
             check(session != 0u) { "Session DVRIP invalide" }
             return "Authentification DVRIP acceptée ; session locale ouverte. Vidéo DVRIP non implémentée."

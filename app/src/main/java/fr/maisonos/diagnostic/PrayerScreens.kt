@@ -208,14 +208,13 @@ private val cities = listOf(City("Paris",48.8566,2.3522,"Europe/Paris"), City("L
             OutlinedButton(onClick = { vm.updateHome { it.copy(duaOffset = it.duaOffset + 1) } }) { Text("Autre doua") }
         }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            item { Text("Invocations coraniques vérifiées · arabe Tanzil · traduction française Noor International / QuranEnc 1.0.0. Changement quotidien hors ligne.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary) }
+            item { Text("Invocations coraniques · texte arabe Tanzil · changement quotidien hors ligne.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary) }
             items(shown, key = { it.id }) { dua -> Panel(dua.title) {
                 Text(dua.arabic, Modifier.fillMaxWidth(), fontSize = 28.sp, lineHeight = 46.sp, textAlign = TextAlign.Right, style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl))
-                Text(dua.french, fontSize = 16.sp, lineHeight = 25.sp)
                 Text(dua.source, color = MaterialTheme.colorScheme.primary, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TextButton(onClick = { vm.updateHome { it.copy(favorites = if (dua.id in it.favorites) it.favorites - dua.id else it.favorites + dua.id) } }) { Text(if (dua.id in home.favorites) "★ Favori" else "☆ Ajouter aux favoris") }
-                    TextButton(onClick = { selected = dua; vm.updateHome { it.copy(duaHistory = (listOf(dua.id) + it.duaHistory).distinct().take(60)) } }) { Text("Agrandir / notes") }
+                    TextButton(onClick = { selected = dua; vm.updateHome { it.copy(duaHistory = (listOf(dua.id) + it.duaHistory).distinct().take(60)) } }) { Text("Agrandir") }
                 }
             } }
             if (shown.isEmpty()) item { Text("Aucune invocation dans cette liste pour le moment.") }
@@ -225,8 +224,7 @@ private val cities = listOf(City("Paris",48.8566,2.3522,"Europe/Paris"), City("L
     selected?.let { dua -> Dialog(onDismissRequest = { selected = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) { Column(Modifier.padding(30.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Text(dua.arabic, Modifier.fillMaxWidth(), fontSize = 36.sp, lineHeight = 60.sp, textAlign = TextAlign.Right, style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl))
-            Text(dua.french, fontSize = 22.sp, lineHeight = 34.sp); Text(dua.source, color = MaterialTheme.colorScheme.primary)
-            if (dua.footnotes.isNotBlank()) Text(dua.footnotes, fontSize = 14.sp)
+            Text(dua.source, color = MaterialTheme.colorScheme.primary)
             TextButton(onClick = { selected = null }) { Text("Fermer") }
         } }
     } }

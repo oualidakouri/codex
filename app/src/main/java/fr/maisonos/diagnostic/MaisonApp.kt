@@ -31,8 +31,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val destinations = listOf("Accueil", "Caméras", "Salat", "Douas", "Événements", "Diagnostics", "Paramètres")
-private val glyphs = listOf("⌂", "◉", "☾", "۞", "↔", "◌", "⚙")
+private val destinations = listOf("Accueil", "Caméras", "Interrupteurs", "Météo", "Salat", "Douas", "Événements", "Diagnostics", "Paramètres")
+private val glyphs = listOf("⌂", "◉", "⏻", "☀", "☾", "۞", "↔", "◌", "⚙")
 internal val french: Locale = Locale.FRENCH
 internal fun timeText(epoch: Long, zone: String) = Instant.ofEpochMilli(epoch).atZone(ZoneId.of(zone)).format(DateTimeFormatter.ofPattern("HH:mm"))
 internal fun countdown(event: PrayerMoment?, now: Instant): String {
@@ -66,7 +66,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
         if (home.presenceOnLaunch && s.foreground && ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED && s.resources?.protect != true) vm.enablePresence(true)
     }
     fun navigate(label: String) { vm.stopVideo(); vm.stopPtz(); vm.interact(); page = label; vm.updateHome { it.copy(lastPage = label) } }
-    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(MaterialTheme.colorScheme.background, MaterialTheme.colorScheme.surface)))) {
         Wallpaper(home.wallpaperId)
         Row(Modifier.fillMaxSize().safeDrawingPadding()) {
             if (wide) Column(Modifier.width(168.dp).fillMaxHeight().background(MaterialTheme.colorScheme.background.copy(alpha = 0.9f)).padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -77,13 +77,13 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                     Surface(color = if (page == label) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().testTag("nav-$label").clickable { navigate(label) }) {
                         Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(glyphs[i], fontSize = 21.sp, color = MaterialTheme.colorScheme.primary)
-                            Text(label, fontSize = 13.sp, fontWeight = if (page == label) FontWeight.Bold else FontWeight.Normal)
+                            Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = if (page == label) FontWeight.Bold else FontWeight.Normal)
                         }
                     }
                 }
                 Spacer(Modifier.weight(1f))
                 Text("LOCAL PAR NATURE", fontSize = 9.sp, color = MaterialTheme.colorScheme.primary, letterSpacing = 1.sp)
-                Text("Maison OS 1.0\n${home.cameras.size} caméra(s) enregistrée(s)", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+                Text("Maison OS ${BuildConfig.VERSION_NAME}\n${home.cameras.size} caméra(s)", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
             }
             Column(Modifier.weight(1f).fillMaxHeight().padding(if (wide) 22.dp else 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -101,11 +101,13 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                     when (page) {
                         "Accueil" -> Dashboard(s, vm, now, day, next, wide, playing == null, ::navigate)
                         "Caméras" -> HomeCameraPage(s, vm)
+                        "Interrupteurs" -> SwitchesScreen(s, vm)
+                        "Météo" -> WeatherScreen(s, vm)
                         "Salat" -> PrayerScreen(s, vm, now, day, next, days?.exceptionOrNull() != null)
                         "Douas" -> DuasScreen(s, vm, date)
                         "Événements" -> EventsScreen(s, vm)
                         "Diagnostics" -> DiagnosticTabs(s, vm)
-                        else -> HomeSettingsScreen(s, vm)
+                        else -> HomeSettingsScreen(s, vm, ::navigate)
                     }
                 }
             }
@@ -120,6 +122,8 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
             }
         }
         if (s.animation) EventOverlay(s, vm)
+        val update by vm.updates.state.collectAsState()
+        if (update.prompt && s.foreground && !s.sleeping && !s.animation && playing == null) UpdateDialog(update, vm.updates)
         if (playing != null) Dialog(onDismissRequest = { AdhanPlayback.stop(context) }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                 Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -156,6 +160,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
     var page by rememberSaveable(profile.id) { mutableIntStateOf(0) }
     var adding by remember { mutableStateOf(false) }
     var properties by remember { mutableStateOf<HomeWidget?>(null) }
+    var preview by remember { mutableStateOf<CameraConfig?>(null) }
     val columns = if (wide) 6 else 4
     val widgets = if (wide) profile.landscape else profile.portrait
     val visible = widgets.filter { it.page == page.coerceAtMost(profile.pages - 1) }
@@ -172,7 +177,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 TextButton(onClick = { if (profile.pages < 20) vm.updateHome { it.copy(profiles = it.profiles.map { p -> if (p.id == profile.id) p.copy(pages = p.pages + 1) else p }) } }) { Text("+ Page") }
             }
         }
-        if (edit) Text("Maintenir une carte pour la déplacer. Tirer son coin inférieur droit pour la redimensionner. Réglages et suppression via ⋯.", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
+        if (edit) Text("Touchez une carte ou son bouton ⋯ pour choisir sa position et sa taille avec les boutons. Le glisser-déposer reste disponible par appui long.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             val cellWidth = maxWidth / columns
             val cellHeight = 105.dp
@@ -186,11 +191,11 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                         var resize by remember { mutableStateOf(Offset.Zero) }
                         var inView by remember { mutableStateOf(false) }
                         val cameraIndex = visible.filter { it.kind == WidgetKind.CAMERA }.indexOfFirst { it.id == widget.id }
-                        val streaming = !edit && s.foreground && !s.sleeping && !s.animation && audioFree && s.resources?.protect != true && home.liveDashboard && cameraIndex < home.maxStreams && inView
+                        val streaming = !edit && preview == null && s.foreground && !s.sleeping && !s.animation && audioFree && s.resources?.protect != true && home.liveDashboard && cameraIndex < home.maxStreams && inView
                         Box(Modifier.offset { IntOffset((widget.x * cellWidthPx + drag.x).roundToInt(), (widget.y * cellHeightPx + drag.y).roundToInt()) }
                             .width(cellWidth * widget.w).height(cellHeight * widget.h).padding(6.dp).testTag("widget-${widget.kind.name}")
                             .onGloballyPositioned { coordinates -> val rect = coordinates.boundsInWindow(); inView = rect.width > 8 && rect.height > 8 }
-                            .then(if (edit) Modifier.pointerInput(widget.id, widget.x, widget.y, columns) {
+                            .then(if (edit) Modifier.clickable { properties = widget }.pointerInput(widget.id, widget.x, widget.y, columns) {
                                 detectDragGesturesAfterLongPress(onDrag = { change, amount -> change.consume(); drag += amount }, onDragCancel = { drag = Offset.Zero }, onDragEnd = {
                                     val x = widget.x + (drag.x / cellWidthPx).roundToInt(); val y = widget.y + (drag.y / cellHeightPx).roundToInt(); drag = Offset.Zero
                                     updateLayout { LayoutEngine.move(it, widget.id, x, y, columns = columns) }
@@ -198,16 +203,16 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                             } else Modifier)) {
                             Surface(Modifier.fillMaxSize(), shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = widget.opacity), border = if (edit) BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)) else null) {
                                 Box(Modifier.fillMaxSize().padding(when (widget.kind) { WidgetKind.CAMERA -> 10.dp; WidgetKind.SHORTCUTS -> 12.dp; else -> 18.dp })) {
-                                    WidgetBody(widget, home, s, vm, now, day, next, streaming, navigate)
-                                    if (edit) TextButton(onClick = { properties = widget }, modifier = Modifier.align(Alignment.TopEnd)) { Text("⋯", fontSize = 22.sp) }
+                                    WidgetBody(widget, home, s, vm, now, day, next, streaming, navigate) { camera -> vm.selectCamera(camera); preview = camera }
+                                    if (edit) TextButton(onClick = { properties = widget }, modifier = Modifier.align(Alignment.TopEnd).sizeIn(minWidth = 48.dp, minHeight = 48.dp).testTag("widget-settings-${widget.kind.name}")) { Text("⋯", fontSize = 24.sp) }
                                 }
                             }
-                            if (edit) Box(Modifier.align(Alignment.BottomEnd).size(36.dp).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), RoundedCornerShape(topStart = 12.dp, bottomEnd = 16.dp)).pointerInput(widget.id, widget.w, widget.h) {
+                            if (edit) Box(Modifier.align(Alignment.BottomEnd).size(48.dp).background(MaterialTheme.colorScheme.primary, RoundedCornerShape(topStart = 12.dp, bottomEnd = 16.dp)).pointerInput(widget.id, widget.w, widget.h) {
                                 detectDragGestures(onDrag = { change, amount -> change.consume(); resize += amount }, onDragCancel = { resize = Offset.Zero }, onDragEnd = {
                                     val w = widget.w + (resize.x / cellWidthPx).roundToInt(); val h = widget.h + (resize.y / cellHeightPx).roundToInt(); resize = Offset.Zero
                                     updateLayout { LayoutEngine.move(it, widget.id, widget.x, widget.y, w, h, columns) }
                                 })
-                            }, contentAlignment = Alignment.Center) { Text("↘", color = Color(0xFF0B121B)) }
+                            }, contentAlignment = Alignment.Center) { Text("↘", color = MaterialTheme.colorScheme.onPrimary) }
                         }
                     } }
                     if (visible.isEmpty()) Text("Cette page est vide. Personnaliser → + Widget.", Modifier.padding(24.dp), color = MaterialTheme.colorScheme.secondary)
@@ -224,17 +229,34 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
     }, confirmButton = { TextButton(onClick = { adding = false }) { Text("Fermer") } })
     properties?.let { w -> AlertDialog(onDismissRequest = { properties = null }, title = { Text(w.kind.label) }, text = {
         Column(Modifier.verticalScroll(rememberScrollState())) {
+            Text("Position · colonne ${w.x + 1}, ligne ${w.y + 1}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(enabled = w.x > 0, onClick = { properties = w.copy(x = w.x - 1) }) { Text("←") }
+                OutlinedButton(enabled = w.x + w.w < columns, onClick = { properties = w.copy(x = w.x + 1) }) { Text("→") }
+                OutlinedButton(enabled = w.y > 0, onClick = { properties = w.copy(y = w.y - 1) }) { Text("↑") }
+                OutlinedButton(enabled = w.y < 990, onClick = { properties = w.copy(y = w.y + 1) }) { Text("↓") }
+            }
+            Text("Largeur : ${w.w} · hauteur : ${w.h}")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(enabled = w.w > 1, onClick = { properties = w.copy(w = w.w - 1) }) { Text("Largeur −") }
+                OutlinedButton(enabled = w.w < columns, onClick = { properties = w.copy(w = w.w + 1, x = w.x.coerceAtMost(columns - w.w - 1)) }) { Text("Largeur +") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(enabled = w.h > 1, onClick = { properties = w.copy(h = w.h - 1) }) { Text("Hauteur −") }
+                OutlinedButton(enabled = w.h < 6, onClick = { properties = w.copy(h = w.h + 1) }) { Text("Hauteur +") }
+            }
             Text("Transparence")
             Slider(value = w.opacity, onValueChange = { v -> properties = w.copy(opacity = v) }, valueRange = 0.3f..1f)
             if (w.kind == WidgetKind.CAMERA) home.cameras.forEach { c -> TextButton(onClick = { properties = w.copy(cameraId = c.id) }) { Text("${if (w.cameraId == c.id) "✓ " else ""}${c.name}") } }
             if (profile.pages > 1) { Text("Page"); Row { repeat(profile.pages) { p -> TextButton(onClick = { properties = w.copy(page = p) }) { Text("${if (w.page == p) "✓" else ""}${p + 1}") } } } }
         }
-    }, confirmButton = { TextButton(onClick = { updateLayout { list -> LayoutEngine.pack(list.map { if (it.id == w.id) w else it }, columns) }; properties = null }) { Text("Enregistrer") } }, dismissButton = { TextButton(onClick = {
+    }, confirmButton = { TextButton(onClick = { updateLayout { list -> LayoutEngine.move(list.map { if (it.id == w.id) w else it }, w.id, w.x, w.y, w.w, w.h, columns) }; properties = null }) { Text("Enregistrer") } }, dismissButton = { TextButton(onClick = {
         vm.updateHome { cfg -> cfg.copy(profiles = cfg.profiles.map { p -> if (p.id != profile.id) p else p.copy(landscape = p.landscape.filterNot { it.id == w.id }, portrait = p.portrait.filterNot { it.id == w.id }) }) }; properties = null
     }) { Text("Supprimer") } }) }
+    preview?.let { camera -> CameraFullscreen(camera, s, vm) { preview = null } }
 }
 
-@Composable private fun WidgetBody(w: HomeWidget, home: HomeConfig, s: ProbeState, vm: ProbeViewModel, now: Instant, day: PrayerDay?, next: PrayerMoment?, streaming: Boolean, navigate: (String) -> Unit) {
+@Composable private fun WidgetBody(w: HomeWidget, home: HomeConfig, s: ProbeState, vm: ProbeViewModel, now: Instant, day: PrayerDay?, next: PrayerMoment?, streaming: Boolean, navigate: (String) -> Unit, openCamera: (CameraConfig) -> Unit) {
     val context = LocalContext.current
     val zone = ZoneId.of(home.prayer.zone)
     val date = now.atZone(zone).toLocalDate()
@@ -262,12 +284,12 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 val dua = Duas.daily(context, date, home.duaOffset)
                 Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(dua.arabic, fontSize = 21.sp, lineHeight = 34.sp, textAlign = TextAlign.Right, modifier = Modifier.fillMaxWidth(), style = LocalTextStyle.current.copy(textDirection = TextDirection.Rtl))
-                    Text(dua.french, fontSize = 13.sp, color = MaterialTheme.colorScheme.secondary)
                 }
                 Text(dua.source, fontSize = 11.sp, color = MaterialTheme.colorScheme.primary, modifier = Modifier.clickable { navigate("Douas") })
             }
             WidgetKind.TABLET -> {
-                Text("${s.resources?.battery ?: "—"}%  ·  ${s.resources?.temperatureC?.let { "$it °C" } ?: "—"}  ·  ${s.resources?.pssMb ?: "—"} Mo", fontSize = 15.sp)
+                Text("Batterie ${s.resources?.battery ?: "—"}% · mémoire ${s.resources?.pssMb ?: "—"} Mo", fontSize = 15.sp)
+                Text("Température de la batterie : ${s.resources?.temperatureC?.let { "$it °C" } ?: "indisponible"}", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
                 Text(if (s.wifi.contains("indisponible")) "Wi-Fi indisponible" else "Réseau local · ${home.cameras.size} caméra(s)", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
             }
             WidgetKind.CAMERA -> {
@@ -275,9 +297,17 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 if (camera == null) TextButton(onClick = { navigate("Caméras") }) { Text("Ajouter une caméra") }
                 else {
                     Text(camera.name, fontSize = 14.sp)
-                    if (streaming && camera.rtspUrl.isNotBlank()) RtspVideo(camera, vm, Modifier.fillMaxWidth().weight(1f))
-                    else Box(Modifier.fillMaxWidth().weight(1f).background(Color.Black.copy(alpha = 0.25f), RoundedCornerShape(12.dp)).clickable { navigate("Caméras") }, contentAlignment = Alignment.Center) { Text("◉  Ouvrir la caméra", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary) }
+                    Box(Modifier.fillMaxWidth().weight(1f)) {
+                        if (streaming && camera.rtspUrl.isNotBlank()) RtspVideo(camera, vm, Modifier.fillMaxSize())
+                        else Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f), RoundedCornerShape(12.dp)), contentAlignment = Alignment.Center) { Text(if (camera.rtspUrl.isBlank()) "Configurer le flux RTSP" else "◉  Ouvrir la caméra", fontSize = 13.sp, color = MaterialTheme.colorScheme.primary) }
+                        Box(Modifier.matchParentSize().clickable { if (camera.rtspUrl.isBlank()) navigate("Caméras") else openCamera(camera) })
+                    }
                 }
+            }
+            WidgetKind.WEATHER -> WeatherWidget(home.weather, vm, now) { navigate("Météo") }
+            WidgetKind.SWITCHES -> {
+                Text("${home.switches.size} interrupteur(s)", fontSize = 22.sp)
+                TextButton(onClick = { navigate("Interrupteurs") }) { Text("Ouvrir les commandes") }
             }
             WidgetKind.MAILBOX -> {
                 Text("✉", fontSize = 36.sp, color = MaterialTheme.colorScheme.primary)
@@ -287,6 +317,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
             WidgetKind.SHORTCUTS -> FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextButton(onClick = { navigate("Caméras") }) { Text("◉ Caméras") }
                 TextButton(onClick = { navigate("Salat") }) { Text("☾ Salat") }
+                TextButton(onClick = { navigate("Interrupteurs") }) { Text("⏻ Interrupteurs") }
                 TextButton(onClick = vm::sleep) { Text("Veille") }
             }
         }

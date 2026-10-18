@@ -55,7 +55,7 @@ import fr.maisonos.core.*
     deleting?.let { camera -> AlertDialog(onDismissRequest = { deleting = null }, title = { Text("Supprimer ${camera.name} ?") }, text = { Text("La caméra est retirée de Maison OS. Aucun réglage matériel n’est modifié.") }, confirmButton = { TextButton(onClick = { vm.removeCamera(camera.id); deleting = null }) { Text("Supprimer") } }, dismissButton = { TextButton(onClick = { deleting = null }) { Text("Annuler") } }) }
 }
 
-@Composable private fun CameraFullscreen(camera: CameraConfig, s: ProbeState, vm: ProbeViewModel, close: () -> Unit) {
+@Composable internal fun CameraFullscreen(camera: CameraConfig, s: ProbeState, vm: ProbeViewModel, close: () -> Unit) {
     var main by remember(camera.id) { mutableStateOf(true) }
     val stream = if (main && camera.mainRtspUrl.isNotBlank()) camera.copy(rtspUrl = camera.mainRtspUrl) else camera
     LaunchedEffect(s.busy, camera.id) { if (!s.busy && s.config.camera.id == camera.id && !s.video) vm.startVideo() }

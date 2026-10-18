@@ -1,0 +1,10 @@
+{
+  "versionCode": 11,
+  "versionName": "1.1.0",
+  "packageName": "fr.maisonos.diagnostic",
+  "apkUrl": "https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/maison-os-1.1.0.apk",
+  "size": 17812504,
+  "sha256": "29084dedd214ec2a3a25df5e61fffab90b0814d6b34917bd21ec52e401a02138",
+  "minSdk": 26,
+  "notes": "Maison OS 1.1.0\n\n• Six nouveaux thèmes ; texte corrigé dans la navigation et les écrans sombres.\n• Deux caméras en miniature en haut de l’accueil, agrandissement au toucher et sous-flux privilégiés.\n• Boutons pour déplacer et redimensionner les widgets, en complément des gestes.\n• Météo extérieure de votre ville : position approximative sur demande, recherche manuelle ou ville de salat ; cache daté hors ligne.\n• Douas affichées en arabe, sans traduction française.\n• Onglet Interrupteurs Smart Life : commandes simulées et connecteur local Tuya 3.3 à configurer et valider avec votre matériel.\n• Diagnostic des ports caméra et format RTSP iCSee/Xiongmai facultatif ; aucune nécessité d’ONVIF pour lire RTSP.\n• Vérification des mises à jour à l’ouverture et dans Paramètres, téléchargement vérifié et installation confirmée par Android.\n\nLa connexion des périphériques, la météo en conditions réelles et les restrictions Android 16 restent à valider sur la tablette."
+}

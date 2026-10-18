@@ -5,7 +5,7 @@ import java.time.ZoneId
 import java.util.UUID
 
 @Serializable
-enum class WidgetKind(val label: String) { CLOCK("Horloge et dates"), PRAYERS("Horaires de salat"), NEXT_PRAYER("Prochaine salat"), DUA("Doua du jour"), CAMERA("Caméra en direct"), TABLET("Tablette et Wi-Fi"), MAILBOX("Courrier · simulation"), SHORTCUTS("Accès rapides") }
+enum class WidgetKind(val label: String) { CLOCK("Horloge et dates"), PRAYERS("Horaires de salat"), NEXT_PRAYER("Prochaine salat"), DUA("Doua du jour"), CAMERA("Caméra en direct"), WEATHER("Météo de ma ville"), SWITCHES("Interrupteurs"), TABLET("État de la tablette"), MAILBOX("Courrier · simulation"), SHORTCUTS("Accès rapides") }
 
 @Serializable
 data class HomeWidget(val id: String = UUID.randomUUID().toString(), val kind: WidgetKind, val x: Int = 0, val y: Int = 0,
@@ -22,6 +22,7 @@ fun defaultWidgets() = listOf(
     HomeWidget(kind = WidgetKind.DUA, x = 3, y = 2, w = 3, h = 3),
     HomeWidget(kind = WidgetKind.TABLET, x = 0, y = 4, w = 3, h = 1),
     HomeWidget(kind = WidgetKind.SHORTCUTS, x = 0, y = 5, w = 6, h = 1),
+    HomeWidget(kind = WidgetKind.WEATHER, x = 0, y = 6, w = 3, h = 2),
 )
 
 @Serializable
@@ -56,8 +57,11 @@ data class PrayerSettings(
     val cameras: List<CameraConfig> = emptyList(), val profiles: List<LayoutProfile> = listOf(LayoutProfile()), val activeProfile: String = "",
     val prayer: PrayerSettings = PrayerSettings(), val media: List<LocalMedia> = emptyList(), val rules: List<LocalRule> = listOf(LocalRule()),
     val favorites: Set<String> = emptySet(), val duaHistory: List<String> = emptyList(), val duaOffset: Int = 0,
-    val dark: Boolean = true, val accent: String = "mint", val wallpaperId: String = "", val maxStreams: Int = 1,
+    val dark: Boolean = true, val accent: String = "mint", val wallpaperId: String = "", val maxStreams: Int = 2,
     val liveDashboard: Boolean = true, val presenceOnLaunch: Boolean = false, val lastPage: String = "Accueil",
+    val theme: String = "classic", val dashboardRevision: Int = 1,
+    val weather: WeatherSettings = WeatherSettings(), val switches: List<LocalSwitch> = emptyList(),
+    val updates: UpdateSettings = UpdateSettings(),
 ) {
     fun validate() {
         prayer.validate(); cameras.forEach { it.validate() }
@@ -70,11 +74,32 @@ data class PrayerSettings(
             }
         }
         require(maxStreams in 1..2 && accent in setOf("mint", "blue", "amber"))
+        require(theme == "classic" || ThemeCatalog.themes.any { it.id == theme })
+        require(dashboardRevision in 0..1)
+        weather.validate(); updates.validate(); switches.forEach { it.validate() }
+        require(switches.size <= 100 && switches.distinctBy { it.id }.size == switches.size)
         require(media.all { runCatching { UUID.fromString(it.id) }.isSuccess && it.name.length <= 180 && it.bytes in 0..104857600 })
         require(rules.all { it.durationSeconds in 1..300 && it.cooldownSeconds in 0..86400 && it.delaySeconds in 0..300 && it.volume in 0f..1f && it.name.length in 1..100 && it.trigger in setOf("mailbox", "presence", "manual") })
     }
     fun profile() = profiles.firstOrNull { it.id == activeProfile } ?: profiles.first()
-    fun exportSafe() = copy(cameras = cameras.map(CameraConfig::exportSafe))
+    fun exportSafe() = copy(cameras = cameras.map(CameraConfig::exportSafe), switches = switches.map { it.copy(password = "") })
+}
+
+/** Add the first two cameras on page one without deleting user widgets. Called on migration/addition, not on every layout edit. */
+fun HomeConfig.withCameraTiles(): HomeConfig {
+    val selected = cameras.take(2)
+    fun tiles(items: List<HomeWidget>, columns: Int): List<HomeWidget> {
+        val width = columns / 2
+        val normalized = items.map { if (it.kind == WidgetKind.CAMERA && it.cameraId.isBlank() && selected.isNotEmpty()) it.copy(cameraId = selected.first().id) else it }
+        val cameraTiles = selected.mapIndexed { index, camera ->
+            val old = normalized.firstOrNull { it.kind == WidgetKind.CAMERA && it.cameraId == camera.id }
+            (old ?: HomeWidget(kind = WidgetKind.CAMERA)).copy(cameraId = camera.id, page = 0, x = index * width, y = 0, w = width, h = 2)
+        }
+        val weather = (normalized.firstOrNull { it.kind == WidgetKind.WEATHER } ?: HomeWidget(kind = WidgetKind.WEATHER)).copy(x = width, y = if (selected.isEmpty()) 0 else 2, w = width, h = 2, page = 0)
+        return LayoutEngine.pack(cameraTiles + weather + normalized.filterNot { it.id == weather.id || (it.kind == WidgetKind.CAMERA && it.cameraId in selected.map(CameraConfig::id)) }, columns)
+    }
+    return copy(dashboardRevision = 1, maxStreams = if (selected.size == 2) 2 else maxStreams,
+        profiles = profiles.map { it.copy(landscape = tiles(it.landscape, 6), portrait = tiles(it.portrait, 4)) })
 }
 
 object LayoutEngine {

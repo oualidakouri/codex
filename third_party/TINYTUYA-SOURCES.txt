@@ -1,0 +1,5 @@
+Tuya 3.3 wire format studied from TinyTuya, MIT, Jason Cox.
+https://github.com/jasonacox/tinytuya
+Revision: 3c0a687d442dc68e13eeafad39062526b20c109a
+Reference files: tinytuya/core/header.py, message_helper.py, XenonDevice.py.
+Kotlin implementation in SmartLife.kt; no Python runtime dependency. No cloud key extraction, default credentials, or 3.4/3.5 support.

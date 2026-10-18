@@ -39,12 +39,18 @@ data class ProbeState(
     val dvripConnected: Boolean = false,
     val diagnostics: Map<String, Diagnostic> = listOf("Tablette", "Wi-Fi / découverte", "DVRIP", "ONVIF", "RTSP", "PTZ", "Présence", "Veille", "Performance", "Audio / adhan", "Calcul salat", "Capteurs", "Animations", "Sans Internet").associateWith { Diagnostic(it) },
     val logs: List<String> = emptyList(),
+    val cameraPorts: List<CameraPortResult> = emptyList(),
+    val switchStates: Map<String, SwitchUi> = emptyMap(),
 )
+
+data class SwitchUi(val on: Boolean? = null, val busy: Boolean = false, val message: String = "État non vérifié")
 
 class ProbeViewModel(app: Application) : AndroidViewModel(app) {
     private val store = ConfigStore(app)
     private val _state = MutableStateFlow(ProbeState())
     val state = _state.asStateFlow()
+    val weather = WeatherController(app, viewModelScope)
+    val updates = AppUpdates(app, viewModelScope)
     private val history = BoundedLog()
     private val simulation = SimulationConnector()
     private var dvrip: DvripClient? = null
@@ -78,6 +84,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
             _state.update { it.copy(report = report) }
             record("Tablette", Evidence.OBSERVED, "Caractéristiques fournies par Android ; aucune valeur commerciale supposée.")
             reschedulePrayers()
+            checkUpdates()
             record("Audio / adhan", Evidence.NOT_TESTED, "Adhan local via AlarmManager et fichier personnel. Vérifier autorisations et tester l’écoute dans Salat.")
             while (isActive) {
                 val r = withContext(Dispatchers.IO) { DeviceDiagnostics.sample(app, started) }
@@ -88,6 +95,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
                     record("Performance", Evidence.OBSERVED, "Protection active : vidéo et analyse caméra arrêtées (température système ou batterie faible).")
                 }
                 if (!_state.value.sleeping && _state.value.foreground && SystemClock.elapsedRealtime() - lastInteraction > _state.value.config.idleSeconds * 1000L) sleep()
+                if (_state.value.foreground && !_state.value.sleeping) weather.refresh(_state.value.config.home.weather)
                 delay(5000)
             }
         }
@@ -110,7 +118,7 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
             catch (e: CancellationException) { record(key, Evidence.NOT_TESTED, "Test interrompu ; résultat non validé."); throw e }
             catch (e: Exception) {
                 // Never log peer bodies, URIs or exception messages: they may contain credentials.
-                record(key, Evidence.FAILED, "Échec (${e.javaClass.simpleName}). Vérifier Wi-Fi, adresse, port, protocole, identifiants et horloge caméra.")
+                record(key, Evidence.FAILED, CameraTroubleshooting.failure(e))
             } finally { _state.update { it.copy(busy = false) } }
         }
     }
@@ -137,17 +145,39 @@ class ProbeViewModel(app: Application) : AndroidViewModel(app) {
             if (index < 0) cameras += next.camera else cameras[index] = next.camera
             next = next.copy(home = next.home.copy(cameras = cameras))
         }
+        if (next.home.cameras.any { candidate -> old.home.cameras.none { it.id == candidate.id } }) next = next.copy(home = next.home.withCameraTiles())
         withContext(Dispatchers.IO) { next.validate(); store.save(next) }
         _state.update { it.copy(config = next) }
         if (old.home.prayer != next.home.prayer) reschedulePrayers()
+        if (old.home.weather != next.home.weather) weather.refresh(next.home.weather, true)
     }
     fun updateHome(transform: (HomeConfig) -> HomeConfig) { viewModelScope.launch {
         try { persist { old -> old.copy(home = transform(old.home)) } }
         catch (e: CancellationException) { throw e }
         catch (_: Exception) { log("Réglage refusé : données invalides ou stockage indisponible.") }
     } }
-    fun selectCamera(camera: CameraConfig) { save(_state.value.config.copy(camera = camera)) }
-    fun newCamera() { save(_state.value.config.copy(camera = CameraConfig())) }
+    fun selectCamera(camera: CameraConfig) { _state.update { it.copy(cameraPorts = emptyList()) }; save(_state.value.config.copy(camera = camera)) }
+    fun newCamera() { _state.update { it.copy(cameraPorts = emptyList()) }; save(_state.value.config.copy(camera = CameraConfig())) }
+    fun checkCameraPorts() = task("Réseau caméra") {
+        val camera = _state.value.config.camera
+        val results = withContext(Dispatchers.IO) { CameraConnectivity(sockets()).inspect(camera) }
+        _state.update { it.copy(cameraPorts = results) }
+        record("Réseau caméra", Evidence.OBSERVED, "Ports testés sans authentification. Un port accessible ne valide ni son protocole ni le mot de passe. Le scan /24 ne teste pas ONVIF.")
+    }
+    fun checkUpdates(force: Boolean = false) { if (_state.value.report != "Lecture du matériel…") updates.check(_state.value.config.home.updates, force) }
+    fun switchCommand(device: LocalSwitch, desired: Boolean? = null) {
+        if (!_state.value.foreground || _state.value.switchStates[device.id]?.busy == true) return
+        viewModelScope.launch {
+            _state.update { it.copy(switchStates = it.switchStates + (device.id to (it.switchStates[device.id] ?: SwitchUi()).copy(busy = true, message = "Commande en cours…"))) }
+            try {
+                val on = if (device.kind == SwitchKind.SIMULATION) desired ?: (_state.value.switchStates[device.id]?.on ?: false)
+                else withContext(Dispatchers.IO) { val client = SmartLifeClient(device, sockets()); if (desired == null) client.read() else client.set(desired) }
+                _state.update { it.copy(switchStates = it.switchStates + (device.id to SwitchUi(on, false,
+                    if (device.kind == SwitchKind.SIMULATION) "SIMULATION · aucun appareil commandé" else "État booléen reçu de l’appareil ; vérifier l’action physiquement."))) }
+            } catch (e: CancellationException) { throw e }
+            catch (_: Exception) { _state.update { it.copy(switchStates = it.switchStates + (device.id to SwitchUi(message = "Connexion locale refusée. Vérifier IP, clé locale 16 caractères, identifiant, point de données et protocole Tuya 3.3. Aucun état supposé."))) } }
+        }
+    }
     fun removeCamera(id: String) { viewModelScope.launch {
         try {
             disconnect(); persist { old ->

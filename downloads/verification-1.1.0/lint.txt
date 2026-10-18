@@ -1,0 +1,152 @@
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:36: Warning: Consider using apply() instead; commit writes its data to persistent storage immediately, whereas apply will handle it in the background [ApplySharedPref]
+        context.getSharedPreferences("adhan-runtime", Context.MODE_PRIVATE).edit().putLong("planned-test", at).commit()
+                                                                                                               ~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:66: Warning: Consider using apply() instead; commit writes its data to persistent storage immediately, whereas apply will handle it in the background [ApplySharedPref]
+                        prefs.edit().putLong("planned-test", 0).putLong("last-test-fired", System.currentTimeMillis()).commit()
+                                                                                                                       ~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:80: Warning: Consider using apply() instead; commit writes its data to persistent storage immediately, whereas apply will handle it in the background [ApplySharedPref]
+                        prefs.edit().putLong("played-${name.name}", scheduled).commit()
+                                                                               ~~~~~~~~
+
+   Explanation for issues of type "ApplySharedPref":
+   Consider using apply() instead of commit on shared preferences. Whereas
+   commit blocks and writes its data to persistent storage immediately, apply
+   will handle it in the background.
+
+/workspace/codex/app/build.gradle.kts:51: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-coroutines-android than 1.10.2 is available: 1.11.0 [NewerVersionAvailable]
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/build.gradle.kts:52: Warning: A newer version of org.jetbrains.kotlinx:kotlinx-serialization-json than 1.9.0 is available: 1.11.0 [NewerVersionAvailable]
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "NewerVersionAvailable":
+   This detector checks with a central repository to see if there are newer
+   versions available for the dependencies used by this project. This is
+   similar to the GradleDependency check, which checks for newer versions
+   available in the Android SDK tools and libraries, but this works with any
+   MavenCentral dependency, and connects to the library every time, which
+   makes it more flexible but also much slower.
+
+/workspace/codex/app/src/main/res/xml/network_security_config.xml:4: Warning: Insecure Base Configuration [InsecureBaseConfiguration]
+<network-security-config><base-config cleartextTrafficPermitted="true" /></network-security-config>
+                                                                 ~~~~
+
+   Explanation for issues of type "InsecureBaseConfiguration":
+   Permitting cleartext traffic could allow eavesdroppers to intercept data
+   sent by your app, which impacts the privacy of your users. Consider only
+   allowing encrypted traffic by setting the cleartextTrafficPermitted tag to
+   false.
+
+   https://goo.gle/InsecureBaseConfiguration
+   https://developer.android.com/preview/features/security-config.html
+
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:30: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        context.getSharedPreferences("adhan-runtime", Context.MODE_PRIVATE).edit().putLong("planned-test", 0).apply()
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:36: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+        context.getSharedPreferences("adhan-runtime", Context.MODE_PRIVATE).edit().putLong("planned-test", at).commit()
+        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:47: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+            prefs.edit().putLong("planned-$key", event.epochMillis).apply()
+            ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:66: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                        prefs.edit().putLong("planned-test", 0).putLong("last-test-fired", System.currentTimeMillis()).commit()
+                        ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:83: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                            prefs.edit().putString("last-error", "Lecture refusée par Android. Vérifier autorisations et restrictions batterie.").apply()
+                            ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:86: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                        prefs.edit().putString("last-error", "Fichier audio absent pour la prière activée. Importer et choisir une récitation.").apply()
+                        ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:89: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                if (scheduled > 0 && now.toEpochMilli() - scheduled > 300000 && name.name in p.enabled) prefs.edit().putString("last-error", "Adhan non joué : alarme reçue avec plus de cinq minutes de retard. Vérifier les restrictions Android.").apply()
+                                                                                                        ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:92: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                context.getSharedPreferences("adhan-runtime", Context.MODE_PRIVATE).edit().putString("last-error", "Programmation impossible : vérifier la configuration de salat.").apply()
+                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/AdhanRuntime.kt:143: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                    getSharedPreferences("adhan-runtime", MODE_PRIVATE).edit().remove("last-error").putLong("last-prepared", System.currentTimeMillis()).apply()
+                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/HomeSettingsScreen.kt:123: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://tanzil.net"))) }) { Text("Consulter Tanzil (Internet facultatif)") }
+                                                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/HomeSettingsScreen.kt:124: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://quranenc.com/en/browse/french_montada/"))) }) { Text("Consulter la traduction et ses mises à jour") }
+                                                                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/PrayerScreens.kt:88: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+            if (Build.VERSION.SDK_INT >= 31) OutlinedButton(onClick = { context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:${context.packageName}"))) }) { Text("Autoriser les alarmes exactes") }
+                                                                                                                                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/RemoteServices.kt:37: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                prefs.edit().putString("reading", Json.encodeToString(reading)).apply()
+                ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/RemoteServices.kt:83: Warning: Use the KTX extension function SharedPreferences.edit instead? [UseKtx]
+                prefs.edit().putString("manifest", text).putString("source", settings.manifestUrl).putLong("checked", System.currentTimeMillis()).apply()
+                ~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/RemoteServices.kt:137: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/SwitchesScreen.kt:88: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+                        TextButton(onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://developer.tuya.com/en/docs/iot"))) }) { Text("Documentation officielle Tuya") }
+                                                                                                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/workspace/codex/app/src/main/java/fr/maisonos/diagnostic/WeatherScreen.kt:91: Warning: Use the KTX extension function String.toUri instead? [UseKtx]
+            TextButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://open-meteo.com/"))) }) { Text("Source : Open-Meteo (CC BY 4.0)") }
+                                                                                                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+   Explanation for issues of type "UseKtx":
+   The Android KTX libraries decorates the Android platform SDK as well as
+   various libraries with more convenient extension functions available from
+   Kotlin, allowing you to use default parameters, named parameters, and
+   more.
+
+   Available options:
+
+   **remove-defaults** (default is true):
+   Whether to skip arguments that match the defaults provided by the extension.
+
+   Extensions often provide default values for some of the parameters. For example:
+   ```kotlin
+   fun Path.readLines(charset: Charset = Charsets.UTF_8): List<String> { return Files.readAllLines(this, charset) }
+   ```
+   This lint check will by default automatically omit parameters that match the default, so if your code was calling
+
+   ```kotlin
+   Files.readAllLines(file, Charset.UTF_8)
+   ```
+   lint would replace this with
+   ```kotlin
+   file.readLines()
+   ```
+   rather than
+
+   ```kotlin
+   file.readLines(Charset.UTF_8
+   ```
+   You can turn this behavior off using this option.
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="remove-defaults" value="true" />
+       </issue>
+   </lint>
+   ```
+
+   **require-present** (default is true):
+   Whether to only offer extensions already available.
+
+   This option lets you only have lint suggest extension replacements if those extensions are already available on the class path (in other words, you're already depending on the library containing the extension method.)
+
+   To configure this option, use a `lint.xml` file with an <option> like this:
+
+   ```xml
+   <lint>
+       <issue id="UseKtx">
+           <option name="require-present" value="true" />
+       </issue>
+   </lint>
+   ```
+
+0 errors, 23 warnings

@@ -1,12 +1,12 @@
-# Utiliser Maison OS 1.0
+# Utiliser Maison OS 1.1
 
 ## Mise à jour
 
-Installer `downloads/maison-os-1.0.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La V1 reprend la caméra sélectionnée ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
+Installer `downloads/maison-os-1.1.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La mise à jour reprend les caméras enregistrées et leurs identifiants ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
 
 ## Dashboard
 
-Le bouton **Personnaliser** déverrouille les cartes. Maintenir une carte puis la déplacer sur la grille ; les autres cartes sont repositionnées pour éviter les chevauchements. Tirer la poignée `↘` pour redimensionner. `⋯` permet la transparence, l’affectation d’une caméra, le changement de page et la suppression. **Verrouiller** protège ensuite la disposition des gestes accidentels.
+Le bouton **Personnaliser** déverrouille les cartes. Touchez une carte ou `⋯`, puis utilisez les flèches et les boutons Largeur/Hauteur. Enregistrez pour appliquer. Vous pouvez aussi maintenir une carte puis la déplacer sur la grille ; les autres cartes sont repositionnées pour éviter les chevauchements. Tirer la poignée `↘` pour redimensionner. `⋯` permet la transparence, l’affectation d’une caméra, le changement de page et la suppression. **Verrouiller** protège ensuite la disposition des gestes accidentels.
 
 Ajouter des pages depuis cette barre. Créer/changer les profils dans Paramètres. Le portrait possède sa propre disposition pour conserver une interface lisible ; les widgets ajoutés existent dans les deux orientations.
 
@@ -41,3 +41,27 @@ Importer des fichiers audio, vidéos MP4/WebM ou images PNG/JPEG/WebP dans Param
 ## Sauvegarde
 
 Exporter un ZIP depuis Paramètres avant un changement important. L’archive inclut dispositions, préférences, règles, favoris et médias. Les mots de passe et les URL RTSP complètes sont exclus pour éviter d’exporter des secrets dans les URL. Après restauration, renseigner à nouveau ces champs. La restauration refuse les chemins sortant de l’archive, les fichiers incohérents et les archives trop volumineuses.
+
+## Thèmes, miniatures et douas
+
+Paramètres propose Océan nocturne, Forêt, Prune et cuivre, Graphite, Sable et olive, Glacier. Les couleurs du texte suivent toute l’interface. Les textes des invocations s’affichent en arabe, sans traduction.
+
+Les deux premières caméras sont placées en tête de la première page après migration. Un toucher ouvre le plein écran ; les lecteurs de l’accueil s’arrêtent pendant cet agrandissement. Paramètres → Caméras et consommation permet de replacer les deux cartes, de désactiver le direct ou de limiter à un flux. Chaque caméra doit avoir sa propre URL RTSP fonctionnelle.
+
+Si une caméra apparaît en DVRIP/RTSP mais sans ONVIF dans le scan /24, ce résultat n’est pas un échec ONVIF : ce scan ne teste pas ce protocole. Enregistrer l’adresse et les identifiants, tester les ports, puis DVRIP et RTSP séparément. Le bouton Préparer les chemins iCSee/Xiongmai propose un format de firmware différent et le sous-flux 1 ; il ne teste aucun mot de passe par défaut. ONVIF n’est pas requis pour lire RTSP.
+
+## Météo de votre ville
+
+Dans Météo, utiliser la position actuelle (autorisation de localisation approximative ponctuelle), rechercher une ville ou reprendre le lieu de salat. La ville, la température extérieure et la date des données sont affichées dans la carte Météo de l’accueil. Le vent est en km/h. Le fonctionnement nécessite Internet ; les dernières données de cette même ville restent visibles et marquées en cache si elles sont anciennes ou hors ligne.
+
+## Interrupteurs Smart Life
+
+L’onglet Interrupteurs est distinct d’Événements. Tester d’abord une lampe de démonstration : Allumer/Éteindre sont alors explicitement simulés. Pour un appareil réel compatible Tuya 3.3, choisir Appareil local puis saisir son IP, device ID, clé locale et point de données du relais. La clé locale n’est pas le mot de passe du compte Smart Life. Les firmwares récents 3.4/3.5 et les appareils Zigbee ne sont pas encore pris en charge ; le bouton Ouvrir Smart Life reste disponible si cette application est installée. Ne pas partager de clé dans le chat.
+
+Événements sert aux scènes avec message, son ou vidéo : importer un média dans Paramètres, créer une règle, choisir un déclencheur (mouvement frontal ou simulation), puis Tester en simulation. Cet écran ne commande pas les interrupteurs.
+
+## Mises à jour intégrées
+
+Cette APK ajoute le mécanisme : Paramètres → Mises à jour de Maison OS → Rechercher une mise à jour. La vérification automatique à l’ouverture peut être désactivée. Une nouvelle version donne accès aux notes, au téléchargement et à Installer ; l’empreinte et la signature sont vérifiées avant d’ouvrir Android. Si Android demande Autoriser cette source, accepter pour Maison OS, revenir et toucher Installer. Ne pas désinstaller l’ancienne application : la mise à jour garde les données.
+
+Le manifeste par défaut est `https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/update.json`. Le champ URL permet de changer de publication HTTPS. La version est recherchée à chaque nouveau lancement ; les retours au premier plan sont espacés d’au moins une minute pour éviter les requêtes rapprochées. Le bouton manuel force la vérification. La proposition peut être reportée et les fonctions locales restent disponibles sans Internet.

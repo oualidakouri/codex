@@ -16,6 +16,7 @@ data class CameraConfig(
     val onvifPath: String = "/onvif/device_service",
     val rtspUrl: String = "",
     val mainRtspUrl: String = "",
+    val rtspVendorPath: Boolean = false,
     val dvripPtzConfirmed: Boolean = false,
 ) {
     fun validate() {
@@ -56,8 +57,17 @@ object LocalEndpoint {
         val u = requireUrl(config.rtspUrl, setOf("rtsp"), config.host)
         require(u.rawUserInfo == null) { "Renseigner les identifiants dans les champs dédiés, pas dans l’URL." }
         fun component(value: String) = java.net.URLEncoder.encode(value, "UTF-8").replace("+", "%20")
+        if (config.rtspVendorPath) {
+            val stream = Regex("stream=([01])").find(u.rawPath.orEmpty() + "?" + u.rawQuery.orEmpty())?.groupValues?.get(1) ?: "1"
+            return "rtsp://${u.host}:${if (u.port > 0) u.port else 554}/user=${component(config.username)}&password=${component(config.password)}&channel=1&stream=$stream.sdp"
+        }
         val credentials = component(config.username) + ":" + component(config.password)
         return "rtsp://$credentials@${u.rawAuthority}${u.rawPath.orEmpty()}${u.rawQuery?.let { "?$it" }.orEmpty()}"
+    }
+    fun withoutRtspCredentials(url: String, host: String): String {
+        val u = requireUrl(url, setOf("rtsp"), host)
+        require(!Regex("(?:password|passwd|token|key)=", RegexOption.IGNORE_CASE).containsMatchIn(u.rawPath.orEmpty() + u.rawQuery.orEmpty())) { "L’URI retournée contient un secret hors du champ dédié" }
+        return "rtsp://${u.host}${if (u.port > 0) ":${u.port}" else ""}${u.rawPath.orEmpty()}${u.rawQuery?.let { "?$it" }.orEmpty()}"
     }
 }
 

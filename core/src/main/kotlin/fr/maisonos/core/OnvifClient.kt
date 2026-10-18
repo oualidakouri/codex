@@ -54,11 +54,15 @@ class OnvifClient(private val config: CameraConfig, sockets: SocketFactory = Soc
         LocalEndpoint.requireUrl(media, setOf("http", "https"), config.host)
         ptz?.let { LocalEndpoint.requireUrl(it, setOf("http", "https"), config.host) }
         val profiles = soap(media, "http://www.onvif.org/ver10/media/wsdl/GetProfiles", "<trt:GetProfiles/>")
-        val profile = SafeXml.all(profiles, "Profiles").firstOrNull() ?: error("Aucun profil vidéo ONVIF")
+        val profile = SafeXml.all(profiles, "Profiles").minByOrNull { item ->
+            val width = SafeXml.text(item, "Width").toLongOrNull()
+            val height = SafeXml.text(item, "Height").toLongOrNull()
+            if (width != null && height != null && width in 1..16384 && height in 1..16384) width * height else Long.MAX_VALUE
+        } ?: error("Aucun profil vidéo ONVIF")
         val token = profile.getAttribute("token").also { require(it.isNotBlank()) }
         val stream = runCatching {
             val r = soap(media, "http://www.onvif.org/ver10/media/wsdl/GetStreamUri", "<trt:GetStreamUri><trt:StreamSetup><tt:Stream>RTP-Unicast</tt:Stream><tt:Transport><tt:Protocol>RTSP</tt:Protocol></tt:Transport></trt:StreamSetup><trt:ProfileToken>${SafeXml.escape(token)}</trt:ProfileToken></trt:GetStreamUri>")
-            SafeXml.text(r, "Uri").also { LocalEndpoint.requireUrl(it, setOf("rtsp"), config.host) }
+            LocalEndpoint.withoutRtspCredentials(SafeXml.text(r, "Uri"), config.host)
         }.getOrNull()
         val continuous = ptz != null && SafeXml.all(profile, "PTZConfiguration").isNotEmpty() && runCatching {
             val nodes = soap(ptz, "http://www.onvif.org/ver20/ptz/wsdl/GetNodes", "<tptz:GetNodes/>")
@@ -82,12 +86,12 @@ class OnvifClient(private val config: CameraConfig, sockets: SocketFactory = Soc
         val envelope = """<s:Envelope xmlns:s="http://www.w3.org/2003/05/soap-envelope" xmlns:tds="http://www.onvif.org/ver10/device/wsdl" xmlns:trt="http://www.onvif.org/ver10/media/wsdl" xmlns:tptz="http://www.onvif.org/ver20/ptz/wsdl" xmlns:tt="http://www.onvif.org/ver10/schema"><s:Header>${security()}</s:Header><s:Body>$body</s:Body></s:Envelope>"""
         val request = Request.Builder().url(url).post(envelope.toRequestBody("application/soap+xml; charset=utf-8; action=\"$action\"".toMediaType())).build()
         client.newCall(request).execute().use { response ->
-            check(response.isSuccessful) { "ONVIF : erreur HTTP ${response.code}. Vérifier port, identifiants et horloge caméra." }
+            if (!response.isSuccessful) throw CameraProtocolFailure(when (response.code) { 401,403 -> CameraFailureKind.AUTHENTICATION; 404 -> CameraFailureKind.ONVIF_PATH; else -> CameraFailureKind.PROTOCOL }, response.code)
             val source = checkNotNull(response.body).source()
             source.request(1_048_577)
             require(source.buffer.size <= 1_048_576) { "Réponse ONVIF trop volumineuse" }
             val root = SafeXml.parse(source.readUtf8())
-            check(SafeXml.all(root, "Fault").isEmpty()) { "ONVIF : commande refusée (SOAP Fault). Vérifier capacités et heure de la caméra." }
+            if (SafeXml.all(root, "Fault").isNotEmpty()) throw CameraProtocolFailure(CameraFailureKind.ONVIF_FAULT)
             return root
         }
     }

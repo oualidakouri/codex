@@ -25,6 +25,7 @@ import fr.maisonos.core.*
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Panel("Des événements qui donnent vie à votre maison") {
             Text("Une règle associe un événement local à un message et, si choisi, un son ou une vidéo personnelle. Les essais manuels sont toujours marqués SIMULATION.")
+            Text("Exemple : importer une vidéo dans Paramètres, créer une règle Mouvement caméra frontale, choisir cette vidéo puis toucher Tester en simulation. Les commandes de lumières sont dans l’onglet Interrupteurs.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
             Button(onClick = { edited = LocalRule() }) { Text("+ Nouvelle règle") }
             Text("Déclencheurs V1 : courrier simulé, mouvement de la caméra frontale et test manuel. Aucun capteur Wi-Fi externe n’est prétendu connecté.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
         }
