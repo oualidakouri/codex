@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites><testsuite name="fr.maisonos.core.CoreTest" tests="16" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:11.245Z" hostname="82c871bb0fd8" time="0.211">
+  <properties />
+  <testcase name="xmlExternalEntitiesAreDisabled" classname="fr.maisonos.core.CoreTest" time="0.007" />
+  <testcase name="localEndpointsRejectInternetAndAmbiguity" classname="fr.maisonos.core.CoreTest" time="0.03" />
+  <testcase name="historyRemainsBounded" classname="fr.maisonos.core.CoreTest" time="0.009" />
+  <testcase name="corruptFramesAreRejectedBeforeAllocation" classname="fr.maisonos.core.CoreTest" time="0.008" />
+  <testcase name="discoveryDoesNotTrustAdvertisedAddress" classname="fr.maisonos.core.CoreTest" time="0.034" />
+  <testcase name="headerRoundTripsLargeUnsignedSession" classname="fr.maisonos.core.CoreTest" time="0.001" />
+  <testcase name="cameraMustNotRedirectToAnotherHost" classname="fr.maisonos.core.CoreTest" time="0.003" />
+  <testcase name="motionIgnoresFirstFrameAndCanReset" classname="fr.maisonos.core.CoreTest" time="0.0" />
+  <testcase name="plaintextPayloadTerminatorsAndBinaryRejection" classname="fr.maisonos.core.CoreTest" time="0.0" />
+  <testcase name="configurationValidatesPortsAndPaths" classname="fr.maisonos.core.CoreTest" time="0.002" />
+  <testcase name="actualSocketLoginAndStopWorkWithFragmentedFixtureResponses" classname="fr.maisonos.core.CoreTest" time="0.061" />
+  <testcase name="sofiaHashUsesKnownEmptyPasswordVector" classname="fr.maisonos.core.CoreTest" time="0.0" />
+  <testcase name="credentialsAreEncodedAndNotPrinted" classname="fr.maisonos.core.CoreTest" time="0.013" />
+  <testcase name="goldenDiscoveryFrameMatchesReferenceWireBytes" classname="fr.maisonos.core.CoreTest" time="0.001" />
+  <testcase name="compatibilityStopIsExplicitAndMustNotBeAssumedUniversal" classname="fr.maisonos.core.CoreTest" time="0.003" />
+  <testcase name="onvifDiscoveryRequiresLocalMatchingEndpoint" classname="fr.maisonos.core.CoreTest" time="0.035" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.DiscoveryProbeTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:11.458Z" hostname="82c871bb0fd8" time="0.008">
+  <properties />
+  <testcase name="directRtspDiscoveryAcceptsFragmentedUnauthorizedResponseWithoutTryingCredentials" classname="fr.maisonos.core.DiscoveryProbeTest" time="0.006" />
+  <testcase name="directDvripDiscoveryNegotiatesWithoutLoggingIn" classname="fr.maisonos.core.DiscoveryProbeTest" time="0.002" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.LayoutEngineTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:11.468Z" hostname="82c871bb0fd8" time="0.025">
+  <properties />
+  <testcase name="defaultLandscapeAndPortraitLayoutsAreValidAndDisjoint" classname="fr.maisonos.core.LayoutEngineTest" time="0.023" />
+  <testcase name="resizingClampsToGridAndIndependentPagesCanShareCells" classname="fr.maisonos.core.LayoutEngineTest" time="0.001" />
+  <testcase name="movingIntoAnotherWidgetRelocatesOthersAndPreservesAllIds" classname="fr.maisonos.core.LayoutEngineTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.OnvifTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:11.498Z" hostname="82c871bb0fd8" time="0.526">
+  <properties />
+  <testcase name="httpDigestChallengeUsesHashAndNeverPlainPassword" classname="fr.maisonos.core.OnvifTest" time="0.314" />
+  <testcase name="unsupportedPtzIsNotAdvertisedAndSoapFaultFails" classname="fr.maisonos.core.OnvifTest" time="0.007" />
+  <testcase name="capabilitiesStreamAndBoundedPtzUseSoapAndWsse" classname="fr.maisonos.core.OnvifTest" time="0.193" />
+  <testcase name="httpRedirectCannotSendCameraCredentialsOutsideLan" classname="fr.maisonos.core.OnvifTest" time="0.004" />
+  <testcase name="publicCapabilitiesEndpointIsRejectedBeforeContact" classname="fr.maisonos.core.OnvifTest" time="0.007" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.PrayerEngineTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:12.027Z" hostname="82c871bb0fd8" time="0.043">
+  <properties />
+  <testcase name="nextPrayerRollsIntoTomorrowAfterIsha" classname="fr.maisonos.core.PrayerEngineTest" time="0.022" />
+  <testcase name="invalidCoordinatesTimezoneAndIncoherentAdjustmentsFail" classname="fr.maisonos.core.PrayerEngineTest" time="0.003" />
+  <testcase name="alarmsAreFutureUniqueAndRespectDisabledPrayers" classname="fr.maisonos.core.PrayerEngineTest" time="0.007" />
+  <testcase name="madhabAndPerPrayerAdjustmentAreApplied" classname="fr.maisonos.core.PrayerEngineTest" time="0.002" />
+  <testcase name="nightQuietHoursHandleMidnight" classname="fr.maisonos.core.PrayerEngineTest" time="0.001" />
+  <testcase name="ishaAdjustedAfterMidnightStillBelongsToThePreviousPrayerDay" classname="fr.maisonos.core.PrayerEngineTest" time="0.005" />
+  <testcase name="meccaMatchesPublishedAdhanReferenceWithinOneMinute" classname="fr.maisonos.core.PrayerEngineTest" time="0.002" />
+  <testcase name="dstComesFromZoneRulesAndNotAnAddedTwentyFourHours" classname="fr.maisonos.core.PrayerEngineTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.RuleEngineTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:12.073Z" hostname="82c871bb0fd8" time="0.001">
+  <properties />
+  <testcase name="rulesHonorTypeEnabledStateAndCooldown" classname="fr.maisonos.core.RuleEngineTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.SimulationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:12.075Z" hostname="82c871bb0fd8" time="0.057">
+  <properties />
+  <testcase name="repeatedReconnectsCannotExhaustCameraLoginBudget" classname="fr.maisonos.core.SimulationTest" time="0.0" />
+  <testcase name="simulationPublishesAnExplicitlySimulatedEvent" classname="fr.maisonos.core.SimulationTest" time="0.057" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.V11Test" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:12.136Z" hostname="82c871bb0fd8" time="0.039">
+  <properties />
+  <testcase name="backupsRemoveLocalTuyaKeysAsWellAsCameraPasswords" classname="fr.maisonos.core.V11Test" time="0.003" />
+  <testcase name="updateManifestRejectsWrongPackageHttpUnboundedDownloadAndInvalidHash" classname="fr.maisonos.core.V11Test" time="0.006" />
+  <testcase name="tuyaCommandAcknowledgementDoesNotFalselyConfirmRequestedState" classname="fr.maisonos.core.V11Test" time="0.006" />
+  <testcase name="cameraErrorsRemainHelpfulWithoutDisclosingPeerMessages" classname="fr.maisonos.core.V11Test" time="0.007" />
+  <testcase name="tuyaFrameMatchesIndependentTinyTuyaReference" classname="fr.maisonos.core.V11Test" time="0.003" />
+  <testcase name="cameraUpgradePlacesBothOnFirstPageAndKeepsOtherWidgets" classname="fr.maisonos.core.V11Test" time="0.001" />
+  <testcase name="allThemeTextAndButtonsMeetNormalTextContrast" classname="fr.maisonos.core.V11Test" time="0.003" />
+  <testcase name="vendorRtspEscapesSecretsAndKeepsSubstreamSeparateFromFullscreen" classname="fr.maisonos.core.V11Test" time="0.004" />
+  <testcase name="tuyaRejectsCorruptionOversizedFramesAndWrongKeys" classname="fr.maisonos.core.V11Test" time="0.001" />
+  <testcase name="weatherUsesOutdoorValuesAndRejectsStaleOrInvalidPayloads" classname="fr.maisonos.core.V11Test" time="0.004" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="fr.maisonos.core.V12Test" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-18T19:37:12.177Z" hostname="82c871bb0fd8" time="0.017">
+  <properties />
+  <testcase name="atomLinksWorkAndRssCannotExpandExternalEntities" classname="fr.maisonos.core.V12Test" time="0.003" />
+  <testcase name="localNewsDoesNotGuessAnUnknownCity" classname="fr.maisonos.core.V12Test" time="0.0" />
+  <testcase name="newWidgetsAreAddedWithoutRetiredSwitchWidgetsOrResettingOtherPages" classname="fr.maisonos.core.V12Test" time="0.001" />
+  <testcase name="quranUsesAsciiSurahNumbersAndExportsExcludePrivateStreamUrls" classname="fr.maisonos.core.V12Test" time="0.001" />
+  <testcase name="rssPreservesTitlesSourcesDatesAndDropsUnsafeOrDuplicateLinks" classname="fr.maisonos.core.V12Test" time="0.002" />
+  <testcase name="unavailableForecastsStayEmptyAndInvalidDaysAreDropped" classname="fr.maisonos.core.V12Test" time="0.003" />
+  <testcase name="quranCatalogKeepsActualAvailableSurahsAndRejectsUnsafeServers" classname="fr.maisonos.core.V12Test" time="0.003" />
+  <testcase name="threeFutureWeatherDaysRespectCityTimezoneAndDst" classname="fr.maisonos.core.V12Test" time="0.003" />
+  <system-out />
+  <system-err />
+</testsuite></testsuites>

@@ -39,7 +39,7 @@ fun requireHttps(url: String) {
 }
 @Serializable data class WeatherReading(val city: String, val latitude: Double, val longitude: Double, val observedAt: Long,
     val fetchedAt: Long, val temperature: Double, val feelsLike: Double, val humidity: Int, val wind: Double,
-    val code: Int, val high: Double, val low: Double) {
+    val code: Int, val high: Double, val low: Double, val forecast: List<WeatherDay> = emptyList(), val zone: String = "UTC") {
     val description get() = when (code) {
         0 -> "Ciel dégagé"; 1, 2 -> "Éclaircies"; 3 -> "Couvert"; 45, 48 -> "Brouillard"
         51,53,55,56,57 -> "Bruine"; 61,63,65,66,67 -> "Pluie"; 71,73,75,77 -> "Neige"
@@ -55,7 +55,7 @@ fun requireHttps(url: String) {
         require(time in now - 172800000..now + 7200000)
         val reading = WeatherReading(settings.city, settings.latitude!!, settings.longitude!!, time, now, number("temperature_2m"), number("apparent_temperature"),
             current.getValue("relative_humidity_2m").jsonPrimitive.int, number("wind_speed_10m"), current.getValue("weather_code").jsonPrimitive.int,
-            daily("temperature_2m_max"), daily("temperature_2m_min"))
+            daily("temperature_2m_max"), daily("temperature_2m_min"), WeatherForecast.parse(daily, time, root["timezone"]?.jsonPrimitive?.content ?: "UTC"), root["timezone"]?.jsonPrimitive?.content ?: "UTC")
         require(reading.temperature in -100.0..80.0 && reading.feelsLike in -150.0..100.0 && reading.humidity in 0..100 && reading.wind in 0.0..500.0)
         return reading
     } }

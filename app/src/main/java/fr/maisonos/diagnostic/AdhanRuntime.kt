@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.time.Instant
 
 object AdhanPlayback {
+    val active = MutableStateFlow(false)
     val title = MutableStateFlow<String?>(null)
     val error = MutableStateFlow<String?>(null)
     fun stop(context: Context) { AdhanScheduler.cancelTest(context); context.stopService(Intent(context, AdhanService::class.java)) }
@@ -112,6 +113,8 @@ class AdhanService : Service() {
     override fun onBind(intent: Intent?) = null
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == "STOP") { stopSelf(); return START_NOT_STICKY }
+        AdhanPlayback.active.value = true
+        QuranPlayback.stop(this)
         val channel = NotificationChannel("adhan", "Adhan et lecture audio", NotificationManager.IMPORTANCE_LOW)
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -156,6 +159,7 @@ class AdhanService : Service() {
         player?.release(); player = null
         focus?.let { getSystemService(AudioManager::class.java).abandonAudioFocusRequest(it) }
         AdhanPlayback.title.value = null
+        AdhanPlayback.active.value = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }

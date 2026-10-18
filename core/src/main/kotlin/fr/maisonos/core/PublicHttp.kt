@@ -77,7 +77,7 @@ object WeatherApi {
     }
     fun current(settings: WeatherSettings): WeatherReading {
         settings.validate(); require(settings.configured)
-        val url = "https://api.open-meteo.com/v1/forecast?latitude=${settings.latitude}&longitude=${settings.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&forecast_days=1&timezone=auto&timeformat=unixtime&temperature_unit=celsius&wind_speed_unit=kmh"
+        val url = "https://api.open-meteo.com/v1/forecast?latitude=${settings.latitude}&longitude=${settings.longitude}&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min,apparent_temperature_min,weather_code,precipitation_probability_max,wind_speed_10m_max&forecast_days=4&timezone=auto&timeformat=unixtime&temperature_unit=celsius&wind_speed_unit=kmh"
         return WeatherReading.parse(PublicHttp.text(url), settings)
     }
 }

@@ -1,0 +1,5 @@
+Initial reciter catalog and 114 surah names extracted from risan/quran-json, revision 6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123 (CC BY-SA 4.0 and source notices already included).
+Metadata only; no audio copied. MP3Quran endpoints/recordings remain remotely hosted.
+Source: data/audio/mp3quran.json SHA256 bb3a03a4e36e7d9ef39119f39943c5acc70dd57f2ee5b1c9c121083cdfe4dc76
+Source: data/tanzil/chapters.json SHA256 5b18adae945fcb6f9fbb865dd7dc596f89a63607a4e6617ca9e37f7f10d3386b
+URL convention confirmed in src/quranjson/audio.py. Embedded URLs not verified live from this cloud (proxy HTTP 403); refreshing uses the provider API.

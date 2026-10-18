@@ -1,11 +1,9 @@
-# Maison OS 1.1 · APK
+# Maison OS 1.2 · APK
 
-**[Télécharger Maison OS 1.1.0](maison-os-1.1.0.apk?raw=true)**
+**[Télécharger Maison OS 1.2.0](maison-os-1.2.0.apk?raw=true)**
 
-Si le téléchargement ne démarre pas, ouvrir [la page de l’APK](maison-os-1.1.0.apk), puis utiliser **Download raw file** dans GitHub, depuis le navigateur.
+Installer par-dessus la version existante, sans désinstallation : même package et signature. Depuis Maison OS 1.1, Paramètres → Mises à jour permet aussi de télécharger cette version et de confirmer l’installation dans Android.
 
-Installer par-dessus Maison OS 1.0 ou le diagnostic, sans désinstallation. Même package et signature ; les caméras, identifiants et dispositions sont conservés. Les deux premières caméras sont replacées sur la première page.
+Le manifeste [update.json](update.json) décrit cette APK. Les anciennes APK restent dans l’historique. Voir [les notes](../docs/releases/1.2.0.md), [le guide](../docs/V1-GUIDE.md), [les limites](../docs/LIMITATIONS-V1.md) et [la validation](../docs/VALIDATION-1.2.0.md).
 
-Cette version ajoute les mises à jour intégrées pour les versions suivantes : Paramètres → Mises à jour de Maison OS. Le fichier [update.json](update.json) fournit version, URL, taille et SHA-256. Android confirme toujours l’installation.
-
-Voir [les notes](../docs/releases/1.1.0.md), [le guide](../docs/V1-GUIDE.md), [les limites](../docs/LIMITATIONS-V1.md) et [les résultats](../docs/VALIDATION-1.1.0.md). Les anciennes APK et preuves restent conservées pour l’historique.
+Si le lien de téléchargement ne démarre pas, ouvrir [la page de l’APK](maison-os-1.2.0.apk) dans le navigateur, puis utiliser Download raw file sur GitHub.

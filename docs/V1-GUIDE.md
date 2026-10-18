@@ -1,8 +1,8 @@
-# Utiliser Maison OS 1.1
+# Utiliser Maison OS 1.2
 
 ## Mise à jour
 
-Installer `downloads/maison-os-1.1.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La mise à jour reprend les caméras enregistrées et leurs identifiants ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
+Installer `downloads/maison-os-1.2.0.apk` par-dessus le diagnostic. Ne pas désinstaller l’ancienne application : sa clé Keystore et sa configuration sont dans le stockage privé. La mise à jour reprend les caméras enregistrées et leurs identifiants ; les caméras qui n’avaient jamais été enregistrées dans le diagnostic doivent être ajoutées.
 
 ## Dashboard
 
@@ -54,14 +54,32 @@ Si une caméra apparaît en DVRIP/RTSP mais sans ONVIF dans le scan /24, ce rés
 
 Dans Météo, utiliser la position actuelle (autorisation de localisation approximative ponctuelle), rechercher une ville ou reprendre le lieu de salat. La ville, la température extérieure et la date des données sont affichées dans la carte Météo de l’accueil. Le vent est en km/h. Le fonctionnement nécessite Internet ; les dernières données de cette même ville restent visibles et marquées en cache si elles sont anciennes ou hors ligne.
 
-## Interrupteurs Smart Life
+## Connectiques reportées
 
-L’onglet Interrupteurs est distinct d’Événements. Tester d’abord une lampe de démonstration : Allumer/Éteindre sont alors explicitement simulés. Pour un appareil réel compatible Tuya 3.3, choisir Appareil local puis saisir son IP, device ID, clé locale et point de données du relais. La clé locale n’est pas le mot de passe du compte Smart Life. Les firmwares récents 3.4/3.5 et les appareils Zigbee ne sont pas encore pris en charge ; le bouton Ouvrir Smart Life reste disponible si cette application est installée. Ne pas partager de clé dans le chat.
+L’onglet et les widgets Interrupteurs sont retirés. Les futures connectiques seront ajoutées quand Home Assistant sera prêt sur le PC de l’utilisateur. Maison OS continue de fonctionner seul pour ses fonctions actuelles.
 
-Événements sert aux scènes avec message, son ou vidéo : importer un média dans Paramètres, créer une règle, choisir un déclencheur (mouvement frontal ou simulation), puis Tester en simulation. Cet écran ne commande pas les interrupteurs.
+Événements conserve ses scènes avec message, son ou vidéo : importer un média dans Paramètres, créer une règle, choisir un déclencheur, puis Tester en simulation.
 
 ## Mises à jour intégrées
 
 Cette APK ajoute le mécanisme : Paramètres → Mises à jour de Maison OS → Rechercher une mise à jour. La vérification automatique à l’ouverture peut être désactivée. Une nouvelle version donne accès aux notes, au téléchargement et à Installer ; l’empreinte et la signature sont vérifiées avant d’ouvrir Android. Si Android demande Autoriser cette source, accepter pour Maison OS, revenir et toucher Installer. Ne pas désinstaller l’ancienne application : la mise à jour garde les données.
 
 Le manifeste par défaut est `https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/update.json`. Le champ URL permet de changer de publication HTTPS. La version est recherchée à chaque nouveau lancement ; les retours au premier plan sont espacés d’au moins une minute pour éviter les requêtes rapprochées. Le bouton manuel force la vérification. La proposition peut être reportée et les fonctions locales restent disponibles sans Internet.
+
+## Prévisions et tenue du lendemain
+
+Le widget météo affiche aujourd’hui et les trois dates futures disponibles. Ouvrir Météo pour mini/maxi, pluie et indications vestimentaires. « Demain » est calculé dans le fuseau de la ville ; un cache ancien conserve ses dates et n’est pas transformé en nouvelles prévisions.
+
+## Lecteur de Coran
+
+Le widget Lecteur de Coran est ajouté à la première page (faire défiler si nécessaire). Dans Coran, choisir un récitant/lecture dans la liste, puis Choisir la sourate. Les sept récitants initiaux sont Alafasy, Sudais, Shuraim, Husary, Abdulbasit, Minshawi et Maher Al Meaqli. Le catalogue peut être actualisé via MP3Quran ; les enregistrements sont diffusés en réseau.
+
+Pour une radio ou un serveur personnel, Paramètres → Lecteur de Coran → URL réseau, puis Enregistrer mon flux. Utiliser une URL audio directe HTTP(S), MP3/AAC ou HLS `.m3u8`, pas une page Web. Une radio continue ne permet pas de choisir sa sourate ; passer au catalogue pour cette fonction. Lecture/Arrêter sont disponibles dans le dashboard et l’écran Coran ; la notification offre Arrêter. Le volume de l’application complète le volume multimédia Android.
+
+La récitation continue en veille et en arrière-plan, s’arrête à la fin d’une sourate ou sur Arrêter, et est interrompue par l’adhan. Elle ne reprend pas automatiquement après ce dernier ni après redémarrage. Les URL personnelles sont exclues des sauvegardes : les ressaisir après restauration.
+
+## Actualités France et ville
+
+Le widget Actualités est ajouté à la première page. Il affiche des titres nationaux et locaux avec sources et liens. Toucher un titre ouvre le navigateur ; Lire/configurer ouvre la liste complète. Actualisation automatique toutes les quinze minutes au premier plan, et bouton Actualiser manuel.
+
+Dans Actualités → Configurer, laisser Ville vide pour reprendre la ville météo (sinon salat), ou saisir votre commune. La source nationale est Franceinfo ; un bouton propose Google Actualités France. Le local utilise une recherche Google Actualités sur le nom de la ville. Un flux RSS/Atom HTTPS personnel peut remplacer chaque source. En cas de panne Internet, les derniers titres restent datés ; aucun titre d’exemple n’est présenté comme réel.

@@ -1,10 +1,10 @@
 {
-  "versionCode": 11,
-  "versionName": "1.1.0",
+  "versionCode": 12,
+  "versionName": "1.2.0",
   "packageName": "fr.maisonos.diagnostic",
-  "apkUrl": "https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/maison-os-1.1.0.apk",
-  "size": 17812504,
-  "sha256": "29084dedd214ec2a3a25df5e61fffab90b0814d6b34917bd21ec52e401a02138",
+  "apkUrl": "https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/maison-os-1.2.0.apk",
+  "size": 18009121,
+  "sha256": "64d339288148715c00272290e22b169a72238c8cef9ccf313e7ad802ffd900a2",
   "minSdk": 26,
-  "notes": "Maison OS 1.1.0\n\n• Six nouveaux thèmes ; texte corrigé dans la navigation et les écrans sombres.\n• Deux caméras en miniature en haut de l’accueil, agrandissement au toucher et sous-flux privilégiés.\n• Boutons pour déplacer et redimensionner les widgets, en complément des gestes.\n• Météo extérieure de votre ville : position approximative sur demande, recherche manuelle ou ville de salat ; cache daté hors ligne.\n• Douas affichées en arabe, sans traduction française.\n• Onglet Interrupteurs Smart Life : commandes simulées et connecteur local Tuya 3.3 à configurer et valider avec votre matériel.\n• Diagnostic des ports caméra et format RTSP iCSee/Xiongmai facultatif ; aucune nécessité d’ONVIF pour lire RTSP.\n• Vérification des mises à jour à l’ouverture et dans Paramètres, téléchargement vérifié et installation confirmée par Android.\n\nLa connexion des périphériques, la météo en conditions réelles et les restrictions Android 16 restent à valider sur la tablette."
+  "notes": "Maison OS 1.2.0\n\n• L’onglet et les widgets Interrupteurs sont retirés. Les connectiques sont reportées à un futur Home Assistant, sans dépendance ajoutée à cette version.\n• Météo : aujourd’hui et les trois jours suivants, mini/maxi, risque de pluie, vent et indications vestimentaires dans l’écran détaillé.\n• Lecteur de Coran sur le dashboard : Lecture/Arrêter, URL audio HTTP(S) personnelle, MP3/AAC et HLS, volume et notification d’arrêt.\n• Sept récitants disponibles au départ (métadonnées MP3Quran sourcées), noms des 114 sourates et actualisation du catalogue par API. Les audios restent diffusés en réseau ; aucun enregistrement n’est inclus dans l’APK.\n• La récitation continue pendant la veille et les changements d’écran. L’adhan l’interrompt et reste prioritaire.\n• Actualités France et locales : widget et écran détaillé, titres, sources, dates et liens. La ville météo ou salat est reprise par défaut, avec ville et flux RSS personnalisables.\n• Cache daté pour météo et actualités, sans faux titres ni prévisions inventées en l’absence de réseau.\n\nLes accès réels aux API météo, MP3Quran et RSS restent à vérifier sur la connexion de la tablette : le proxy du cloud refuse ces domaines. Les fixtures et l’audio de test sont distingués des essais matériels."
 }

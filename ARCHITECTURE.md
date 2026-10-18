@@ -1,6 +1,6 @@
-# Architecture Maison OS 1.1
+# Architecture Maison OS 1.2
 
-Deux modules Kotlin, sans backend : `core` (domaine JVM testable) et `app` (Android/Compose). Application ID historique `fr.maisonos.diagnostic` conservé pour mettre à jour le diagnostic sans perte de configuration. Version 1.1.0 / code 11, min API 26, cible API 36.
+Deux modules Kotlin, sans backend : `core` (domaine JVM testable) et `app` (Android/Compose). Application ID historique `fr.maisonos.diagnostic` conservé pour mettre à jour le diagnostic sans perte de configuration. Version 1.2.0 / code 12, min API 26, cible API 36.
 
 ## Domaine
 
@@ -45,3 +45,13 @@ Room/DataStore et Navigation Compose ne sont pas ajoutés mécaniquement : cette
 `SmartLifeClient : SwitchPort` encapsule les trames Tuya 3.3 (AES natif du protocole, CRC et tailles bornées). Lecture de l’état booléen du point configuré ; un ACK n’est pas assimilé à l’état demandé. Commandes explicites, sans scan de points de données, extraction de clé ou login cloud. Simulation isolée. Les clés locales sont chiffrées dans la configuration et exclues des exports.
 
 Le lecteur RTSP conserve le TCP, suspend les reprises sur refus d’identifiants et affiche des indications sans recopier les exceptions/URL secrètes. Le format iCSee/Xiongmai construit les identifiants dans l’URL de lecture en mémoire uniquement. Les URI ONVIF standard sont nettoyées de leur userinfo ; le profil de moindre résolution annoncée est préféré.
+
+## Extensions 1.2
+
+Schéma 4 : les versions 1 à 3 sont migrées, les widgets SWITCHES sont retirés, QURAN/NEWS sont ajoutés et le widget météo est agrandi pour les prévisions. Les caméras, médias, profils et autres identifiants de widget sont conservés. Les anciens modèles Tuya restent décodables, sans écran ni commande exposés. Les futures connectiques seront traitées séparément via Home Assistant quand le serveur de l’utilisateur sera prêt.
+
+`WeatherForecast` lit quatre jours Open-Meteo en date locale de la ville et expose les trois dates futures, y compris lors du changement d’heure. Une prévision incomplète n’est pas remplacée par une estimation. `WeatherDay.clothing` donne une indication déterministe à partir du ressenti/minimum, de la pluie et du vent.
+
+`QuranCatalogController` initialise un catalogue de sept récitations complètes et 114 noms de sourates depuis les métadonnées versionnées de risan/quran-json (MP3Quran/Tanzil, sources et empreintes dans third_party). L’API MP3Quran actualise le catalogue ; les audios restent en réseau. `QuranService` est un foreground service mediaPlayback Media3 : HTTP(S), MP3/AAC/HLS, piste vidéo désactivée, audio focus, volume, notification d’arrêt, START_NOT_STICKY. Aucune reprise au boot. L’adhan arrête explicitement la récitation. Les URL personnelles sont chiffrées et exclues des exports.
+
+`NewsParser` lit RSS 2/Atom avec le parseur XML sécurisé existant, garde des titres/source/date/lien, refuse les URL non HTTPS des articles, et borne la taille et le nombre d’éléments. `NewsController` actualise au plus toutes les quinze minutes au premier plan, conserve un cache privé par URL et isole les échecs France/local. La recherche locale est une recherche Google Actualités sur un nom de ville, pas une géolocalisation de chaque article. Les URL RSS personnelles sont exclues des exports.

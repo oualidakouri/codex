@@ -1,7 +1,7 @@
 # Maison OS : consignes du projet
 
 - Application Android native Kotlin/Compose ; toute logique des premières versions doit fonctionner directement sur la tablette, sans serveur ou Home Assistant obligatoire.
-- Le périmètre actuel est la V1.1 demandée après les essais utilisateur. L’utilisateur a déclaré le diagnostic fonctionnel sur son matériel et demandé explicitement de passer à l’application. Lire README.md, ARCHITECTURE.md, docs/V1-GUIDE.md, docs/LIMITATIONS-V1.md et docs/VALIDATION-1.1.0.md avant d’étendre le produit.
+- Le périmètre actuel est la V1.2 demandée après les essais utilisateur. L’utilisateur a déclaré le diagnostic fonctionnel sur son matériel et demandé explicitement de passer à l’application. Lire README.md, ARCHITECTURE.md, docs/V1-GUIDE.md, docs/LIMITATIONS-V1.md et docs/VALIDATION-1.2.0.md avant d’étendre le produit.
 - Ne pas confondre tests JVM, émulateur et essais matériels réels. La seconde caméra est découverte en DVRIP/RTSP ; sa connexion et son firmware restent à vérifier ; elle ne bloque pas les fonctions indépendantes.
 - Ne jamais inventer une compatibilité, un horaire de prière, une source religieuse ou une connexion réelle. Garder simulations et états non vérifiés explicites.
 - Aucun secret, IP personnelle ou équipement personnel codé en dur. Les adresses de fixtures dans les tests sont des exemples, pas une configuration utilisateur.
@@ -12,6 +12,9 @@
 - Les tests instrumentés nécessitent un appareil ou un émulateur : leur compilation n’est pas leur exécution. Mettre à jour le rapport de validation après une modification significative.
 - Pour les mises à jour de l’APK fournie, conserver applicationId et clé `.gradle/maison-debug.keystore`. Ne pas commiter la clé. Une APK de CI générée avec une autre clé ne met pas à jour cette installation.
 
-- Smart Life : seul le connecteur local Tuya 3.3 est implémenté ; ne pas présenter les versions 3.4/3.5 ou les appareils Zigbee comme compatibles sans tests. Ne pas demander de secrets dans le chat.
-- Météo de la ville distincte de la température de batterie. Réseau extérieur uniquement pour les fonctions explicites météo/mises à jour ; ne pas supposer Internet disponible.
+- Interrupteurs : onglet retiré à la demande de l’utilisateur. Les anciens modèles ne servent qu’à lire les sauvegardes ; aucune commande n’est exposée. Les futures connectiques passeront par Home Assistant lorsque l’utilisateur l’aura installé sur son ancien PC. Ne pas le déployer maintenant.
+- Météo de la ville distincte de la température de batterie : aujourd’hui + trois jours, sans extrapolation de données manquantes. Les indications vestimentaires sont des règles simples, pas un service météo supplémentaire.
+- Coran : métadonnées sourcées et fichiers audio du fournisseur ou URL personnelle ; ne pas générer d’audio religieux ni inventer une disponibilité. Garder l’adhan prioritaire, un arrêt explicite et aucun démarrage au boot.
+- Actualités : titres/source/date/lien à partir des flux RSS/Atom ; pas de titres fictifs présentés comme réels, pas de copie d’articles intégraux.
+- Réseau extérieur explicite pour météo, actualités, lecteur réseau et mises à jour ; les fonctions locales gardent leur autonomie sans serveur. Distinguer le proxy cloud bloqué des conditions de la tablette.
 - Publier les mises à jour avec tools/prepare-release.py : même certificat, versionCode augmenté et APK/manifeste cohérents. Android conserve la confirmation d’installation.

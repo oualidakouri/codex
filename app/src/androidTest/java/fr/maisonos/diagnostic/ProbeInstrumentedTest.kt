@@ -34,14 +34,14 @@ class ProbeInstrumentedTest {
         // Exercise the configurable duration with a longer rule before asserting its label.
         val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
         compose.waitUntil(20000) { vm.state.value.report != "Lecture du matériel…" }
-        val fixture = ProbeConfig(home = HomeConfig(liveDashboard = false, rules = listOf(LocalRule(durationSeconds = 60)), updates = UpdateSettings(enabled = false)))
+        val fixture = ProbeConfig(home = HomeConfig(liveDashboard = false, rules = listOf(LocalRule(durationSeconds = 60)), updates = UpdateSettings(enabled = false), news = NewsSettings(enabled = false)))
         compose.runOnUiThread { vm.save(fixture) }
         compose.waitUntil(20000) { vm.state.value.config == fixture && !vm.state.value.busy }
         compose.activityRule.scenario.recreate()
         compose.onNodeWithTag("nav-Accueil").performClick()
     }
     @After fun restore() {
-        AdhanPlayback.stop(context); AdhanScheduler.cancel(context)
+        QuranPlayback.stop(context); AdhanPlayback.stop(context); AdhanScheduler.cancel(context)
         if (::previous.isInitialized) ConfigStore(context).save(previous)
     }
     @Test fun simulationAndNavigationAreExplicit() {
@@ -86,7 +86,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(3, migrated.version); assertEquals(300,migrated.idleSeconds)
+        assertEquals(4, migrated.version); assertEquals(300,migrated.idleSeconds)
         assertEquals("old-secret", migrated.home.cameras.single().password)
         assertTrue(migrated.home.profile().landscape.any { it.kind == WidgetKind.CAMERA })
     }
@@ -140,24 +140,72 @@ class ProbeInstrumentedTest {
             compose.waitUntil(15000) { vm.state.value.config.home.theme == theme }
             compose.waitForIdle()
             val expected = ThemeCatalog.forHome(vm.state.value.config.home).text.toInt()
-            for (node in listOf(compose.onNodeWithText("Bienvenue à la maison"), compose.onNodeWithText("Interrupteurs", useUnmergedTree = true))) {
+            for (node in listOf(compose.onNodeWithText("Bienvenue à la maison"), compose.onNodeWithText("Coran", useUnmergedTree = true))) {
                 val layouts = mutableListOf<TextLayoutResult>()
                 node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(layouts) }
                 assertEquals(expected,layouts.single().layoutInput.style.color.toArgb())
             }
         }
     }
-    @Test fun dailyDuaIsArabicOnlyAndSwitchSimulationIsExplicit() {
+    @Test fun dailyDuaIsArabicOnlyAndSwitchesTabIsRemoved() {
+        compose.onNodeWithTag("nav-Interrupteurs").assertDoesNotExist()
         compose.onNodeWithTag("nav-Douas").performClick()
         val dua = Duas.daily(context, java.time.LocalDate.now(), 0)
         compose.onNodeWithText(dua.french).assertDoesNotExist()
-        compose.onNodeWithTag("nav-Interrupteurs").performClick()
-        compose.onNodeWithTag("add-simulated-switch").performClick()
-        compose.waitUntil(15000) { ConfigStore(context).load().home.switches.size == 1 }
-        val id = ConfigStore(context).load().home.switches.single().id
-        compose.onNodeWithTag("switch-on-$id").performScrollTo().performClick()
-        compose.onNodeWithText("Allumé").assertExists()
-        compose.onNodeWithText("SIMULATION · aucun appareil commandé").assertExists()
+        compose.onNodeWithTag("nav-Coran").performClick()
+        compose.onNodeWithText("Récitants et sourates · MP3Quran").assertExists()
+    }
+    @Test fun embeddedQuranCatalogHasSevenRealRecitersAnd114SurahNames() {
+        val catalog = kotlinx.serialization.json.Json.decodeFromString<QuranCatalog>(context.assets.open("quran-catalog.json").bufferedReader().use { it.readText() })
+        assertEquals(7,catalog.recitations.size)
+        assertEquals((1..114).toList(),catalog.surahs.map { it.id })
+        assertTrue(catalog.recitations.all { it.server.startsWith("https://") && it.surahs == (1..114).toList() })
+        assertTrue(catalog.recitations.any { it.name == "Mishary Alafasi" })
+        assertEquals("الفاتحة",catalog.surahs.first().name)
+    }
+    @Test fun networkQuranPlaybackReallyStartsAndStopsForegroundService() {
+        val samples = 160000
+        val wav = ByteBuffer.allocate(44 + samples * 2).order(ByteOrder.LITTLE_ENDIAN)
+        wav.put("RIFF".toByteArray());wav.putInt(36 + samples*2);wav.put("WAVEfmt ".toByteArray());wav.putInt(16);wav.putShort(1);wav.putShort(1);wav.putInt(8000);wav.putInt(16000);wav.putShort(2);wav.putShort(16);wav.put("data".toByteArray());wav.putInt(samples*2)
+        repeat(samples) { i -> wav.putShort((kotlin.math.sin(i * 2 * Math.PI * 440 / 8000) * 500).toInt().toShort()) }
+        val server = java.net.ServerSocket(0,2,java.net.InetAddress.getByName("127.0.0.1"))
+        val executor = java.util.concurrent.Executors.newSingleThreadExecutor()
+        val future = executor.submit {
+            server.accept().use { socket ->
+                socket.soTimeout = 10000
+                val input = socket.getInputStream().bufferedReader()
+                while (true) { val line = input.readLine() ?: break; if (line.isEmpty()) break }
+                socket.getOutputStream().use { output ->
+                    output.write("HTTP/1.1 200 OK\r\nContent-Type: audio/wav\r\nContent-Length: ${wav.array().size}\r\nConnection: close\r\n\r\n".toByteArray())
+                    output.write(wav.array());output.flush()
+                }
+            }
+        }
+        try {
+            val vm = androidx.lifecycle.ViewModelProvider(compose.activity)[ProbeViewModel::class.java]
+            val q = QuranSettings(url = "http://127.0.0.1:${server.localPort}/recitation.wav")
+            compose.runOnUiThread { vm.updateHome { it.copy(quran = q) } }
+            compose.waitUntil(15000) { vm.state.value.config.home.quran == q }
+            compose.onNodeWithTag("nav-Coran").performClick()
+            compose.onNodeWithTag("quran-play").performScrollTo().performClick()
+            compose.waitUntil(30000) { QuranPlayback.state.value.playing }
+            assertTrue(QuranPlayback.state.value.active)
+            compose.onNodeWithTag("quran-stop").performClick()
+            compose.waitUntil(10000) { !QuranPlayback.state.value.active }
+            future.get(10,java.util.concurrent.TimeUnit.SECONDS)
+        } finally { QuranPlayback.stop(context);server.close();executor.shutdownNow() }
+    }
+    @Test fun v11MigrationRemovesSwitchWidgetsAndKeepsExistingLayoutIds() {
+        val text = """{"version":3,"home":{"lastPage":"Interrupteurs","news":{"enabled":false},"profiles":[{"id":"existing","name":"Mon profil","landscape":[{"id":"clock-id","kind":"CLOCK","x":0,"y":0,"w":3,"h":2},{"id":"old-switch","kind":"SWITCHES","x":3,"y":0,"w":3,"h":2}],"portrait":[{"id":"clock-id","kind":"CLOCK","x":0,"y":0,"w":3,"h":2},{"id":"old-switch","kind":"SWITCHES","x":0,"y":2,"w":3,"h":2}]}]}}"""
+        val key = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.getKey("maison.config.v1", null)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
+        File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
+        val migrated = ConfigStore(context).load()
+        assertEquals(4,migrated.version);assertEquals("Accueil",migrated.home.lastPage)
+        val widgets = migrated.home.profile().landscape
+        assertTrue(widgets.any { it.id == "clock-id" && it.kind == WidgetKind.CLOCK })
+        assertTrue(widgets.none { it.kind == WidgetKind.SWITCHES })
+        assertTrue(widgets.any { it.kind == WidgetKind.QURAN });assertTrue(widgets.any { it.kind == WidgetKind.NEWS })
     }
     @Test fun widgetSizeCanBeChangedWithButtonsWithoutDragging() {
         val old = ConfigStore(context).load().home.profile().landscape.first { it.kind == WidgetKind.CLOCK }
@@ -173,7 +221,7 @@ class ProbeInstrumentedTest {
         val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, key) }
         File(context.filesDir,"probe-config.enc").writeBytes(cipher.iv + cipher.doFinal(text.toByteArray()))
         val migrated = ConfigStore(context).load()
-        assertEquals(3,migrated.version); assertEquals("first-secret",migrated.camera.password)
+        assertEquals(4,migrated.version); assertEquals("first-secret",migrated.camera.password)
         assertEquals(listOf("first-secret","second-secret"),migrated.home.cameras.map { it.password })
         assertEquals(2,migrated.home.maxStreams); assertEquals("Caméras",migrated.home.lastPage)
         for (tiles in listOf(migrated.home.profile().landscape,migrated.home.profile().portrait)) {

@@ -71,7 +71,7 @@ private suspend fun cityFromLocation(context: Context): WeatherCity {
             Text("Température extérieure, ressenti, vent et conditions météo. La température de batterie reste un indicateur distinct dans Diagnostics.", fontSize = 13.sp)
             if (settings.configured) {
                 Text(settings.city, fontSize = 25.sp, color = MaterialTheme.colorScheme.primary)
-                WeatherWidget(settings, vm, Instant.now()) {}
+                WeatherWidget(settings, vm, Instant.now(), detailed = true) {}
             }
             Row(verticalAlignment = Alignment.CenterVertically) { Switch(checked = settings.enabled, onCheckedChange = { enabled -> vm.updateHome { it.copy(weather = it.weather.copy(enabled = enabled)) } }); Text("Actualiser la météo par Internet") }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -87,13 +87,13 @@ private suspend fun cityFromLocation(context: Context): WeatherCity {
             Button(enabled = query.trim().length >= 2 && !state.searching, onClick = { vm.weather.search(query) }) { Text(if (state.searching) "Recherche…" else "Rechercher ma ville") }
             state.cities.forEach { city -> OutlinedButton(onClick = { choose(city) }) { Text(city.name) } }
             if (state.error.isNotBlank()) Text(state.error, fontSize = 12.sp, color = MaterialTheme.colorScheme.error)
-            Text("Données Open-Meteo · météo actuelle et minimum/maximum du jour. Actualisation toutes les 30 minutes au premier plan. Sans Internet, les dernières données de cette ville restent datées et marquées en cache.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
+            Text("Données Open-Meteo · météo actuelle et prévisions des trois prochains jours. Actualisation toutes les 30 minutes au premier plan. Sans Internet, les dernières données de cette ville restent datées et marquées en cache.", fontSize = 12.sp, color = MaterialTheme.colorScheme.secondary)
             TextButton(onClick = { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://open-meteo.com/"))) }) { Text("Source : Open-Meteo (CC BY 4.0)") }
         }
     }
 }
 
-@Composable internal fun WeatherWidget(settings: WeatherSettings, vm: ProbeViewModel, now: Instant, configure: () -> Unit) {
+@Composable internal fun WeatherWidget(settings: WeatherSettings, vm: ProbeViewModel, now: Instant, detailed: Boolean = false, configure: () -> Unit) {
     val state by vm.weather.state.collectAsState()
     val reading = state.reading?.takeIf { it.latitude == settings.latitude && it.longitude == settings.longitude }
     if (!settings.configured) {
@@ -108,6 +108,19 @@ private suspend fun cityFromLocation(context: Context): WeatherCity {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("${"%.0f".format(reading.temperature)}°", fontSize = 46.sp, color = MaterialTheme.colorScheme.primary)
             Column { Text(reading.description, fontSize = 14.sp); Text("${"%.0f".format(reading.low)}° / ${"%.0f".format(reading.high)}° · ${"%.0f".format(reading.wind)} km/h", fontSize = 12.sp) }
+        }
+        val zone = runCatching { ZoneId.of(reading.zone) }.getOrDefault(ZoneId.systemDefault())
+        val today = now.atZone(zone).toLocalDate()
+        val future = reading.forecast.filter { runCatching { java.time.LocalDate.parse(it.date) > today }.getOrDefault(false) }.take(3)
+        if (future.isEmpty()) Text("Prévisions à actualiser",fontSize = 11.sp,color = MaterialTheme.colorScheme.secondary)
+        future.forEach { day ->
+            val date = java.time.LocalDate.parse(day.date)
+            val label = if (date == today.plusDays(1)) "Demain" else date.format(DateTimeFormatter.ofPattern("EEE dd/MM",Locale.FRENCH))
+            Row(Modifier.fillMaxWidth(),horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(label,fontSize = if (detailed) 16.sp else 12.sp)
+                Text("${"%.0f".format(day.low)}° / ${"%.0f".format(day.high)}° · ${day.description} · ${day.rainChance?.let { "$it % pluie" } ?: "pluie n/d"}",fontSize = if (detailed) 15.sp else 11.sp)
+            }
+            if (detailed) Text("Conseil indicatif : ${day.clothing}",fontSize = 12.sp,color = MaterialTheme.colorScheme.secondary)
         }
         val cached = now.toEpochMilli() - reading.fetchedAt > 3600000 || state.error.isNotBlank() || !settings.enabled
         val date = Instant.ofEpochMilli(reading.observedAt).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))

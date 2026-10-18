@@ -16,8 +16,8 @@ android {
         applicationId = "fr.maisonos.diagnostic"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.1.0"
+        versionCode = 12
+        versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     buildFeatures { compose = true; buildConfig = true }
@@ -51,6 +51,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-exoplayer-hls:1.8.0")
     implementation("androidx.media3:media3-exoplayer-rtsp:1.8.0")
     implementation("androidx.media3:media3-ui:1.8.0")
     implementation("androidx.camera:camera-camera2:1.5.1")

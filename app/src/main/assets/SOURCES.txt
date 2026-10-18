@@ -1,4 +1,4 @@
-Maison OS 1.1 — Sources et licences
+Maison OS 1.2 — Sources et licences
 
 Adhan Kotlin 0.0.5 — Batoul Apps, MIT. https://github.com/batoulapps/adhan-kotlin
 
@@ -18,3 +18,7 @@ Les licences complètes MIT et CC BY-SA 4.0 sont incluses dans les fichiers asse
 Connecteur local Tuya 3.3 : format de protocole étudié depuis TinyTuya, Jason Cox, MIT, révision 3c0a687d442dc68e13eeafad39062526b20c109a. https://github.com/jasonacox/tinytuya . Licence TINYTUYA-LICENSE.txt incluse. Aucune clé ou donnée personnelle issue du dépôt de référence.
 
 Météo et recherche de ville : Open-Meteo, données CC BY 4.0 ; géocodage issu de GeoNames. https://open-meteo.com/ https://www.geonames.org/ . Consultation facultative par Internet après configuration.
+
+Lecteur de Coran : MP3Quran, https://mp3quran.net/eng/api . Catalogue initial : métadonnées de risan/quran-json révision 6523a9ad3b73bb7e8cb3a9cdf0ea774b8bab3123, fichiers data/audio/mp3quran.json et data/tanzil/chapters.json ; licence CC BY-SA 4.0 et notices Tanzil conservées. Les noms de récitation et URL sont reproduits depuis cette source. Aucun enregistrement audio n’est redistribué dans l’APK ; la lecture utilise les serveurs du fournisseur.
+
+Actualités : titres et métadonnées RSS/Atom diffusés par Franceinfo, Google Actualités et les sources choisies par l’utilisateur. Chaque titre conserve sa source et son lien ; aucun article intégral n’est embarqué ou copié. Les droits des éditeurs restent applicables.

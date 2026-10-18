@@ -1,4 +1,4 @@
-# Limites de Maison OS 1.1
+# Limites de Maison OS 1.2
 
 - Les retours utilisateur ont validé le diagnostic sur sa tablette et au moins la vidéo/PTZ d’une caméra. La seconde caméra est désormais découverte en DVRIP/RTSP selon le retour utilisateur ; son authentification, son format RTSP et son ONVIF restent à vérifier.
 - Le matériel domestique est inaccessible depuis le cloud. Les tests JVM et émulateur ne certifient ni les caméras réelles, ni l’audio audible, ni la stabilité prolongée sur Android 16.
@@ -16,5 +16,10 @@
 
 - Mises à jour : Internet et une URL de manifeste accessible sont nécessaires. Une confirmation dans l’installateur Android reste obligatoire ; l’application ne contourne pas cette protection. La source GitHub publique fonctionne sans compte ; une URL privée doit être remplacée par un emplacement accessible. La même clé est indispensable aux futures APK.
 - Météo : service extérieur Open-Meteo, localisation approximative ponctuelle ou ville choisie. Les données peuvent être indisponibles ; le cache est daté. L’accès réel au service météo est bloqué par le proxy du cloud de développement (HTTP 403), donc pas validé de bout en bout ici. La tablette utilise sa propre connexion Internet.
-- Smart Life : connexion locale Tuya 3.3 uniquement, avec identifiant, clé locale de 16 octets et point booléen de relais connus. Firmware 3.4/3.5, Zigbee via passerelle et commandes cloud non implémentés. Pas de récupération automatique des appareils du compte Smart Life. Les essais de protocole sont en fixture ; aucun interrupteur physique testé depuis le cloud.
+- Interrupteurs retirés du menu et des widgets. Les anciennes données restent lisibles pour compatibilité ; aucune commande n’est proposée. Home Assistant n’est ni installé ni connecté dans cette version.
 - Le scan approfondi /24 vérifie DVRIP et RTSP ; il n’effectue pas une recherche ONVIF unicast. Le nouveau test des ports vérifie la joignabilité TCP seulement. La découverte ONVIF standard continue d’utiliser WS-Discovery. Une fréquence Wi-Fi différente ne prouve pas une isolation réseau.
+
+- Coran : sept récitations référencées dans le catalogue initial, API MP3Quran et URL personnelle HTTP(S) MP3/AAC/HLS. Pas de fichier audio religieux distribué ni de lecture hors ligne sans serveur local. Un fournisseur peut déplacer ou retirer ses fichiers. Le catalogue initial indique une source, pas un test en direct des 798 fichiers. Les API/audio officiels sont bloqués par le proxy cloud ; le test de lecture utilise un vrai flux de test local avec un son synthétique, sans prétendre entendre une récitation réelle.
+- L’audio reste actif en veille/arrière-plan après l’action Lecture et s’arrête par le widget, l’écran ou la notification. La notification dépend des permissions Android ; l’adhan interrompt le Coran, sans reprise automatique. Aucune commande de lecture à distance ou reprise après panne n’est ajoutée.
+- Prévisions : trois jours futurs selon les données disponibles ; conseils vestimentaires indicatifs. Pluie ou ressenti indisponibles restent marqués manquants. Les dates du cache sont visibles.
+- Actualités : flux Franceinfo/Google Actualités ou RSS personnels. La recherche locale par nom de ville peut inclure des mentions hors de la commune. Affichage des titres seulement ; lecture de l’article dans le navigateur. Les API RSS sont bloquées par le proxy du cloud, donc accès réel à vérifier sur la tablette. Aucun titre fictif n’est préchargé comme actualité.

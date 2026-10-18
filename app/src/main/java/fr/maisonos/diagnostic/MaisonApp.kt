@@ -31,8 +31,8 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.roundToInt
 
-private val destinations = listOf("Accueil", "Caméras", "Interrupteurs", "Météo", "Salat", "Douas", "Événements", "Diagnostics", "Paramètres")
-private val glyphs = listOf("⌂", "◉", "⏻", "☀", "☾", "۞", "↔", "◌", "⚙")
+private val destinations = listOf("Accueil", "Caméras", "Coran", "Météo", "Actualités", "Salat", "Douas", "Événements", "Diagnostics", "Paramètres")
+private val glyphs = listOf("⌂", "◉", "♫", "☀", "▤", "☾", "۞", "↔", "◌", "⚙")
 internal val french: Locale = Locale.FRENCH
 internal fun timeText(epoch: Long, zone: String) = Instant.ofEpochMilli(epoch).atZone(ZoneId.of(zone)).format(DateTimeFormatter.ofPattern("HH:mm"))
 internal fun countdown(event: PrayerMoment?, now: Instant): String {
@@ -75,7 +75,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 Spacer(Modifier.height(22.dp))
                 destinations.forEachIndexed { i, label ->
                     Surface(color = if (page == label) MaterialTheme.colorScheme.primary.copy(alpha = 0.14f) else Color.Transparent, shape = RoundedCornerShape(12.dp), modifier = Modifier.fillMaxWidth().testTag("nav-$label").clickable { navigate(label) }) {
-                        Row(Modifier.padding(horizontal = 12.dp, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                             Text(glyphs[i], fontSize = 21.sp, color = MaterialTheme.colorScheme.primary)
                             Text(label, fontSize = 13.sp, color = MaterialTheme.colorScheme.onBackground, fontWeight = if (page == label) FontWeight.Bold else FontWeight.Normal)
                         }
@@ -101,7 +101,8 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                     when (page) {
                         "Accueil" -> Dashboard(s, vm, now, day, next, wide, playing == null, ::navigate)
                         "Caméras" -> HomeCameraPage(s, vm)
-                        "Interrupteurs" -> SwitchesScreen(s, vm)
+                        "Coran" -> QuranScreen(s, vm)
+                        "Actualités" -> NewsScreen(s, vm)
                         "Météo" -> WeatherScreen(s, vm)
                         "Salat" -> PrayerScreen(s, vm, now, day, next, days?.exceptionOrNull() != null)
                         "Douas" -> DuasScreen(s, vm, date)
@@ -221,7 +222,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
         }
     }
     if (adding) AlertDialog(onDismissRequest = { adding = false }, title = { Text("Ajouter un widget") }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState())) { WidgetKind.entries.forEach { kind -> TextButton(onClick = {
+        Column(Modifier.verticalScroll(rememberScrollState())) { WidgetKind.entries.filterNot { it == WidgetKind.SWITCHES }.forEach { kind -> TextButton(onClick = {
             val widget = HomeWidget(kind = kind, page = page, x = 0, y = 0, w = if (kind == WidgetKind.SHORTCUTS) columns else 3.coerceAtMost(columns), h = if (kind == WidgetKind.TABLET) 1 else 2)
             vm.updateHome { cfg -> cfg.copy(profiles = cfg.profiles.map { p -> if (p.id != profile.id) p else p.copy(landscape = LayoutEngine.pack(p.landscape + widget.copy(w = minOf(widget.w, 6)), 6), portrait = LayoutEngine.pack(p.portrait + widget.copy(w = minOf(widget.w, 4)), 4)) }) }
             adding = false
@@ -305,10 +306,9 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
                 }
             }
             WidgetKind.WEATHER -> WeatherWidget(home.weather, vm, now) { navigate("Météo") }
-            WidgetKind.SWITCHES -> {
-                Text("${home.switches.size} interrupteur(s)", fontSize = 22.sp)
-                TextButton(onClick = { navigate("Interrupteurs") }) { Text("Ouvrir les commandes") }
-            }
+            WidgetKind.SWITCHES -> Text("Connectiques reportées",fontSize = 12.sp)
+            WidgetKind.QURAN -> QuranControls(home.quran,true) { navigate("Coran") }
+            WidgetKind.NEWS -> NewsWidget(home,vm) { navigate("Actualités") }
             WidgetKind.MAILBOX -> {
                 Text("✉", fontSize = 36.sp, color = MaterialTheme.colorScheme.primary)
                 Text("Mode simulation · aucun capteur connecté", fontSize = 11.sp, color = MaterialTheme.colorScheme.secondary)
@@ -317,7 +317,7 @@ internal fun countdown(event: PrayerMoment?, now: Instant): String {
             WidgetKind.SHORTCUTS -> FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 TextButton(onClick = { navigate("Caméras") }) { Text("◉ Caméras") }
                 TextButton(onClick = { navigate("Salat") }) { Text("☾ Salat") }
-                TextButton(onClick = { navigate("Interrupteurs") }) { Text("⏻ Interrupteurs") }
+                TextButton(onClick = { navigate("Coran") }) { Text("♫ Coran") }
                 TextButton(onClick = vm::sleep) { Text("Veille") }
             }
         }

@@ -12,7 +12,7 @@ import subprocess
 root = Path(__file__).resolve().parents[1]
 parser = argparse.ArgumentParser()
 parser.add_argument('--sdk', default=os.environ.get('ANDROID_SDK_ROOT', '/workspace/android-sdk'))
-parser.add_argument('--notes', default='docs/releases/1.1.0.md')
+parser.add_argument('--notes', default=None)
 args = parser.parse_args()
 metadata_file = root / 'app/build/outputs/apk/debug/output-metadata.json'
 metadata = json.loads(metadata_file.read_text())
@@ -32,7 +32,7 @@ if tracked and destination.exists():
     assert hashlib.sha256(destination.read_bytes()).hexdigest() == sha, 'Published versions are immutable. Increase versionCode/versionName.'
 else:
     shutil.copyfile(apk, destination)
-notes = (root / args.notes).read_text().strip()
+notes = (root / (args.notes or f'docs/releases/{version}.md')).read_text().strip()
 assert len(notes) <= 4000
 manifest = dict(versionCode=code, versionName=version, packageName=metadata['applicationId'],
                 apkUrl=f'https://raw.githubusercontent.com/oualidakouri/codex/main/downloads/maison-os-{version}.apk',
