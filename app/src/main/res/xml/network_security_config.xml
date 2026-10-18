@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Local IP cameras commonly require HTTP/RTSP. All app endpoints are guarded
+     against public destinations in LocalEndpoint. TLS verification stays enabled. -->
+<network-security-config><base-config cleartextTrafficPermitted="true" /></network-security-config>
